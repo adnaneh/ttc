@@ -22,12 +22,28 @@ const raw = {
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
   SENTRY_DSN: process.env.SENTRY_DSN,
-  KMS_KEY_RESOURCE: process.env.KMS_KEY_RESOURCE
+  KMS_KEY_RESOURCE: process.env.KMS_KEY_RESOURCE,
+
+  HANA_HOST: process.env.HANA_HOST,
+  HANA_PORT: process.env.HANA_PORT,
+  HANA_USER: process.env.HANA_USER,
+  HANA_PASSWORD: process.env.HANA_PASSWORD,
+  HANA_SCHEMA: process.env.HANA_SCHEMA,
+  HANA_INVOICES_VIEW: process.env.HANA_INVOICES_VIEW,
+
+  HANA_SSL: process.env.HANA_SSL,
+  HANA_SSL_VALIDATE: process.env.HANA_SSL_VALIDATE,
+
+  INVOICE_NOTIFY_DEFAULT: process.env.INVOICE_NOTIFY_DEFAULT,
+  AMOUNT_TOLERANCE: process.env.AMOUNT_TOLERANCE
 };
 
 const parsed = zEnvFunctions.parse(raw);
 
 export const env = {
   ...parsed,
-  PINECONE_INDEX_NAME: parsed.PINECONE_INDEX_NAME ?? 'fyxer-prod'
+  PINECONE_INDEX_NAME: parsed.PINECONE_INDEX_NAME ?? 'fyxer-prod',
+  HANA_INVOICES_VIEW: parsed.HANA_INVOICES_VIEW ?? 'INVOICES',
+  INVOICE_NOTIFY_DEFAULT: parsed.INVOICE_NOTIFY_DEFAULT ?? 'maria.ttc@gmail.com',
+  AMOUNT_TOLERANCE: Number(parsed.AMOUNT_TOLERANCE ?? '0.01')
 };

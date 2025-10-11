@@ -29,7 +29,21 @@ export const zEnvFunctions = z.object({
   SENTRY_DSN: z.string().optional(),
 
   // Token encryption
-  KMS_KEY_RESOURCE: z.string().optional()
+  KMS_KEY_RESOURCE: z.string().optional(),
+
+  // ----- SAP HANA -----
+  HANA_HOST: z.string().optional(),
+  HANA_PORT: z.string().optional(),
+  HANA_USER: z.string().optional(),
+  HANA_PASSWORD: z.string().optional(),
+  HANA_SCHEMA: z.string().optional(),
+  HANA_INVOICES_VIEW: z.string().optional(),
+  HANA_SSL: z.string().optional(),
+  HANA_SSL_VALIDATE: z.string().optional(),
+
+  // ----- Incoherence flow -----
+  INVOICE_NOTIFY_DEFAULT: z.string().optional(),
+  AMOUNT_TOLERANCE: z.string().optional()
 });
 
 export type EnvFunctions = z.infer<typeof zEnvFunctions>;

@@ -1,0 +1,14 @@
+import { onMessagePublished } from 'firebase-functions/v2/pubsub';
+import { processInvoicePdf } from '../pipelines/invoiceProcess';
+import { logger } from '../util/logger';
+
+export const invoiceProcess = onMessagePublished('invoice.process', async (event) => {
+  const payload = event.data?.message?.data ? JSON.parse(Buffer.from(event.data.message.data, 'base64').toString()) : {};
+  try {
+    const res = await processInvoicePdf(payload);
+    logger.info('invoice.process done', { ...res, threadId: payload.threadId, messageId: payload.messageId });
+  } catch (e: any) {
+    logger.error('invoice.process failed', { err: String(e?.message || e) });
+  }
+});
+

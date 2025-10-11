@@ -26,6 +26,12 @@
    - Wire Graph subscriptions (`/webhooks/graph`), set HTTPS trigger URL in Azure app
    - Replace embedding stub with your provider (OpenAI text-embedding, etc.)
 
+## SAP HANA invoice flow
+- Set Functions secrets for HANA connectivity: `HANA_HOST`, `HANA_PORT`, `HANA_USER`, `HANA_PASSWORD`, `HANA_SCHEMA`, `HANA_INVOICES_VIEW` (defaults to `INVOICES`), and SSL flags if needed.
+- Add Pub/Sub topic: `invoice.process`.
+- When a Gmail message with PDF arrives, the system stores the PDF in GCS, extracts fields (regex + optional LLM with `OPENAI_API_KEY`), looks up the invoice in HANA, and if any incoherence is found, drafts a reply in the thread to `INVOICE_NOTIFY_DEFAULT` (defaults to `maria.ttc@gmail.com`).
+- When the user sends that draft, the next Gmail push parses the corrections from the message and applies them to HANA with prepared statements.
+
 ## Outlook/MS Graph setup
 1. Create an app in Azure App Registrations (multitenant or single-tenant).
 2. Add redirect URI: `https://REGION-PROJECT.cloudfunctions.net/authOutlookCallback`

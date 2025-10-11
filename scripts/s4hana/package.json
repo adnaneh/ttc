@@ -1,0 +1,14 @@
+{
+  "name": "s4hana-tools",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Helpers to fetch and model S/4HANA metadata",
+  "license": "UNLICENSED",
+  "scripts": {
+    "generate:models": "node generate-ts-models.js"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^4.4.1"
+  }
+}
+

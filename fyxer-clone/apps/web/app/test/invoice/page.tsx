@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 
 type InvoiceFields = {
@@ -52,6 +52,7 @@ export default function TestInvoicePage() {
   const [mock, setMock] = useState(true);
   const [loading, setLoading] = useState(false);
   const [mapping, setMapping] = useState<Mapping>(DEFAULT_MAPPING);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Load/save mapper from localStorage (per browser)
   useEffect(() => {
@@ -81,7 +82,11 @@ export default function TestInvoicePage() {
 
   const fnBase = process.env.NEXT_PUBLIC_FUNCTIONS_URL!;
   async function onUpload() {
-    if (!file) return;
+    // If no file is selected, prompt the file chooser
+    if (!file) {
+      fileInputRef.current?.click();
+      return;
+    }
     setLoading(true);
     setResult(null);
     try {
@@ -152,13 +157,21 @@ export default function TestInvoicePage() {
       {/* Upload panel */}
       <div className="rounded-md border p-4 space-y-3">
         <div className="flex flex-col md:flex-row md:items-center gap-3">
-          <input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+          <input
+            ref={fileInputRef}
+            id="invoice-file"
+            type="file"
+            accept="application/pdf"
+            className="sr-only"
+            aria-label="Invoice PDF"
+            onChange={(e) => setFile(e.target.files?.[0] || null)}
+          />
           <label className="inline-flex items-center gap-2 text-sm">
             <input type="checkbox" checked={mock} onChange={(e) => setMock(e.target.checked)} />
             Use mock SAP (no DB)
           </label>
-          <Button onClick={onUpload} disabled={!file || loading}>
-            {loading ? 'Analyzing…' : 'Upload & Analyze'}
+          <Button onClick={onUpload} disabled={loading}>
+            {loading ? 'Analyzing…' : (file ? 'Upload & Analyze' : 'Choose PDF…')}
           </Button>
         </div>
         {file && <p className="text-xs opacity-70">Selected: {file.name} ({Math.round(file.size/1024)} KB)</p>}
@@ -301,4 +314,3 @@ export default function TestInvoicePage() {
     </main>
   );
 }
-

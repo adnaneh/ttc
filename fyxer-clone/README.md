@@ -29,7 +29,7 @@
 ## SAP HANA invoice flow
 - Set Functions secrets for HANA connectivity: `HANA_HOST`, `HANA_PORT`, `HANA_USER`, `HANA_PASSWORD`, `HANA_SCHEMA`, `HANA_INVOICES_VIEW` (defaults to `INVOICES`), and SSL flags if needed.
 - Add Pub/Sub topic: `invoice.process`.
-- When a Gmail message with PDF arrives, the system stores the PDF in GCS, extracts fields (regex + optional LLM with `OPENAI_API_KEY`), looks up the invoice in HANA, and if any incoherence is found, drafts a reply in the thread to `INVOICE_NOTIFY_DEFAULT` (defaults to `maria.ttc@gmail.com`).
+- When a Gmail/Outlook message with an invoice attachment (PDF or common image like PNG/JPEG) arrives, the system stores the file in GCS, extracts fields (PDF: regex + optional LLM; images: vision LLM requires `OPENAI_API_KEY`), looks up the invoice in HANA, and if any incoherence is found, drafts a reply in the thread to `INVOICE_NOTIFY_DEFAULT` (defaults to `maria.ttc@gmail.com`).
 - When the user sends that draft, the next Gmail push parses the corrections from the message and applies them to HANA with prepared statements.
 
 ## Outlook/MS Graph setup

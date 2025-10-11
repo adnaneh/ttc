@@ -79,12 +79,15 @@ export async function ingestOutlookFolderChanges(accessToken: string, mailboxId:
         createdAt: Date.now()
       }, { merge: true });
 
-      // Inbox: download attachments and enqueue PDFs for invoice processing
+      // Inbox: download attachments and enqueue invoice candidates (PDFs and common images)
       if (folder === 'Inbox') {
         const { attachments } = await downloadAndStoreOutlookAttachments({ accessToken, mailboxId, messageId: id });
         for (const a of attachments) {
-          const isPdf = (a.mimeType || '').includes('pdf') || (a.filename || '').toLowerCase().endsWith('.pdf');
-          if (isPdf) {
+          const mime = (a.mimeType || '').toLowerCase();
+          const name = (a.filename || '').toLowerCase();
+          const isPdf = mime.includes('pdf') || name.endsWith('.pdf');
+          const isImage = mime.startsWith('image/') || name.endsWith('.png') || name.endsWith('.jpg') || name.endsWith('.jpeg');
+          if (isPdf || isImage) {
             await pubsub.topic('invoice.process').publishMessage({
               json: { provider: 'outlook', mailboxId, threadId: msg.conversationId, messageId: id, attachment: a }
             });

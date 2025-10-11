@@ -77,3 +77,36 @@ Use null for unknown. Return ONLY JSON.`;
     return base;
   }
 }
+
+export async function extractInvoiceFieldsFromImage(buf: Buffer, mimetype = 'image/png'): Promise<InvoiceFields> {
+  if (!openai) throw new Error('OPENAI_API_KEY required for image extraction');
+
+  const prompt = `Extract invoice fields as strict JSON with keys:
+{ "invoiceNo": string?, "vendorId": string?, "vendorName": string?, "currency": string?, "amount": number?, "invoiceDate": "YYYY-MM-DD"?, "dueDate": "YYYY-MM-DD"?, "poNumber": string? }.
+Use null for unknown. Return ONLY JSON.`;
+
+  const b64 = buf.toString('base64');
+  const url = `data:${mimetype};base64,${b64}`;
+
+  try {
+    const resp = await (openai as any).chat.completions.create({
+      model: 'gpt-4o-mini',
+      response_format: { type: 'json_object' as const },
+      messages: [
+        { role: 'system', content: prompt },
+        { role: 'user', content: [
+          { type: 'text', text: 'Extract from this invoice image. Return only JSON.' },
+          { type: 'image_url', image_url: { url } }
+        ] }
+      ]
+    });
+    const json = (resp.choices?.[0]?.message as any)?.content || '{}';
+    const obj = JSON.parse(json);
+    const merged: InvoiceFields = { ...obj };
+    Object.keys(merged).forEach(k => (merged as any)[k] == null && delete (merged as any)[k]);
+    return merged;
+  } catch {
+    // If vision fails, return empty
+    return {};
+  }
+}

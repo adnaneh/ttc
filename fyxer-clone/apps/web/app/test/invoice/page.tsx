@@ -152,7 +152,7 @@ export default function TestInvoicePage() {
   return (
     <main className="mx-auto max-w-5xl p-6 space-y-6">
       <h1 className="text-2xl font-semibold">Invoice Test Harness</h1>
-      <p className="text-sm opacity-80">Upload a PDF invoice → extract entities → compare with SAP (HANA). Configure your HANA column names below.</p>
+      <p className="text-sm opacity-80">Upload a PDF or image (PNG/JPEG) invoice → extract entities → compare with SAP (HANA). Configure your HANA column names below.</p>
 
       {/* Upload panel */}
       <div className="rounded-md border p-4 space-y-3">
@@ -161,9 +161,9 @@ export default function TestInvoicePage() {
             ref={fileInputRef}
             id="invoice-file"
             type="file"
-            accept="application/pdf"
+            accept="application/pdf,image/png,image/jpeg"
             className="sr-only"
-            aria-label="Invoice PDF"
+            aria-label="Invoice PDF or Image (PNG/JPEG)"
             onChange={(e) => setFile(e.target.files?.[0] || null)}
           />
           <label className="inline-flex items-center gap-2 text-sm">
@@ -171,7 +171,7 @@ export default function TestInvoicePage() {
             Use mock SAP (no DB)
           </label>
           <Button onClick={onUpload} disabled={loading}>
-            {loading ? 'Analyzing…' : (file ? 'Upload & Analyze' : 'Choose PDF…')}
+            {loading ? 'Analyzing…' : (file ? 'Upload & Analyze' : 'Choose PDF/Image…')}
           </Button>
         </div>
         {file && <p className="text-xs opacity-70">Selected: {file.name} ({Math.round(file.size/1024)} KB)</p>}
@@ -251,7 +251,7 @@ export default function TestInvoicePage() {
                   <thead>
                     <tr className="text-left border-b">
                       <th className="py-2 pr-3">Field</th>
-                      <th className="py-2 pr-3">PDF</th>
+                      <th className="py-2 pr-3">File</th>
                       <th className="py-2 pr-3">SAP</th>
                     </tr>
                   </thead>
@@ -276,7 +276,7 @@ export default function TestInvoicePage() {
               <thead>
                 <tr className="text-left border-b">
                   <th className="py-2 pr-3 w-48">Field</th>
-                  <th className="py-2 pr-3">PDF (extracted)</th>
+                  <th className="py-2 pr-3">File (extracted)</th>
                   <th className="py-2 pr-3">SAP (HANA column)</th>
                 </tr>
               </thead>

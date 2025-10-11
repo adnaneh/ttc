@@ -53,14 +53,17 @@ export async function ingestFromGmail(accessToken: string, startHistoryId: strin
       }, { merge: true });
     }
 
-    // Download attachments (if any) and enqueue PDFs
+    // Download attachments (if any) and enqueue invoice candidates (PDFs and common images)
     const stored = await downloadAndStoreGmailAttachments({
       accessToken, mailboxId, messageId: msg.id!, payload: msg.payload as any
     });
 
     for (const a of stored) {
-      const isPdf = (a.mimeType || '').includes('pdf') || (a.filename || '').toLowerCase().endsWith('.pdf');
-      if (isPdf && msg.threadId) {
+      const mime = (a.mimeType || '').toLowerCase();
+      const name = (a.filename || '').toLowerCase();
+      const isPdf = mime.includes('pdf') || name.endsWith('.pdf');
+      const isImage = mime.startsWith('image/') || name.endsWith('.png') || name.endsWith('.jpg') || name.endsWith('.jpeg');
+      if ((isPdf || isImage) && msg.threadId) {
         await pubsub.topic('invoice.process').publishMessage({
           json: { provider: 'gmail', mailboxId, threadId: msg.threadId, messageId: msg.id, attachment: a }
         });

@@ -2,6 +2,7 @@ import { onRequest } from 'firebase-functions/v2/https';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const Busboy = require('busboy');
 import { extractInvoiceFieldsFromPdf, type InvoiceFields } from '../pipelines/invoiceExtract';
+import { extractInvoiceFieldsFromImage } from '../pipelines/invoiceExtract';
 import { fetchInvoiceByIdentifiers } from '../util/hana';
 import { findIncoherences } from '../util/invoiceCompare';
 import { env } from '../env';
@@ -65,19 +66,31 @@ function mockSapFromExtracted(f: InvoiceFields): Record<string, any> {
 export const testInvoice = onRequest({ timeoutSeconds: 120, memory: '1GiB' }, async (req, res) => {
   cors(res);
   if (req.method === 'OPTIONS') { res.status(204).end(); return; }
-  if (req.method !== 'POST') { res.status(405).send('POST a multipart/form-data with a PDF file (field name can be anything).'); return; }
+  if (req.method !== 'POST') { res.status(405).send('POST multipart/form-data with a PDF or image file (PNG/JPEG).'); return; }
 
   try {
     const mock = String(req.query.mock || '').toLowerCase() === '1' || String(req.query.mock || '').toLowerCase() === 'true';
     const { buffer, mimetype, filename } = await parseMultipart(req);
 
-    if (!mimetype.includes('pdf')) {
-      res.status(400).json({ error: 'Please upload a PDF (content-type application/pdf).' });
+    let extracted: InvoiceFields;
+    let modelUsed = 'regex-only';
+    if (mimetype.includes('pdf')) {
+      // 1) Extract entities from PDF
+      extracted = await extractInvoiceFieldsFromPdf(buffer);
+      modelUsed = process.env.OPENAI_API_KEY ? 'regex + LLM' : 'regex-only';
+    } else if (mimetype.startsWith('image/')) {
+      // 1) Extract entities from image (vision)
+      try {
+        extracted = await extractInvoiceFieldsFromImage(buffer, mimetype);
+        modelUsed = 'vision LLM';
+      } catch (e: any) {
+        res.status(400).json({ error: 'Image extraction requires OPENAI_API_KEY to be set.' });
+        return;
+      }
+    } else {
+      res.status(400).json({ error: 'Unsupported file type. Please upload a PDF or image (PNG/JPEG).' });
       return;
     }
-
-    // 1) Extract entities from PDF
-    const extracted = await extractInvoiceFieldsFromPdf(buffer);
 
     // 2) Look up SAP (or mock)
     let sapRow: Record<string, any> | null = null;
@@ -105,7 +118,7 @@ export const testInvoice = onRequest({ timeoutSeconds: 120, memory: '1GiB' }, as
       sap: sapRow,
       matched,
       incoherences,
-      modelUsed: env.OPENAI_API_KEY ? 'regex + LLM' : 'regex-only',
+      modelUsed,
       tolerance: env.AMOUNT_TOLERANCE
     });
     return;

@@ -1,4 +1,4 @@
-import { extractInvoiceFieldsFromPdf, InvoiceFields } from './invoiceExtract';
+import { extractInvoiceFieldsFromPdf, extractInvoiceFieldsFromImage, InvoiceFields } from './invoiceExtract';
 import { fetchInvoiceByIdentifiers } from '../util/hana';
 import { findIncoherences } from '../util/invoiceCompare';
 import { createGmailDraftReply } from '../util/gmailDraft';
@@ -11,16 +11,34 @@ import { google } from 'googleapis';
 
 function escapeHtml(s: string) { return String(s).replace(/[&<>\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]!)); }
 
-export async function processInvoicePdf(args: {
+export async function processInvoiceAttachment(args: {
   provider: 'gmail'|'outlook';
   mailboxId: string;
   threadId: string;       // gmail: threadId; outlook: conversationId
   messageId: string;      // gmail: messageId; outlook: messageId (for reply target)
-  attachment: { filename: string; ptr: string };
+  attachment: { filename: string; ptr: string; mimeType?: string };
   orgId?: string;
 }) {
   const buf = await readByPtr(args.attachment.ptr);
-  const fields: InvoiceFields = await extractInvoiceFieldsFromPdf(buf);
+  const mime = (args.attachment.mimeType || '').toLowerCase();
+  const name = (args.attachment.filename || '').toLowerCase();
+  const isPdf = mime.includes('pdf') || name.endsWith('.pdf');
+  const isImage = mime.startsWith('image/') || name.endsWith('.png') || name.endsWith('.jpg') || name.endsWith('.jpeg');
+
+  let fields: InvoiceFields = {};
+  if (isPdf) {
+    fields = await extractInvoiceFieldsFromPdf(buf);
+  } else if (isImage) {
+    try {
+      fields = await extractInvoiceFieldsFromImage(buf, mime || 'image/png');
+    } catch {
+      // Vision unavailable or failed; skip processing gracefully
+      return { matched: false };
+    }
+  } else {
+    // Unknown type: attempt PDF parse as a fallback
+    fields = await extractInvoiceFieldsFromPdf(buf);
+  }
 
   // Lookup in SAP HANA
   const sap = await fetchInvoiceByIdentifiers({
@@ -106,4 +124,3 @@ export async function processInvoicePdf(args: {
 
   return { matched: true, coherent: false, draftId, caseId: caseRef.id };
 }
-

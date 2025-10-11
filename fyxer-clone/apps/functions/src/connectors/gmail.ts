@@ -1,36 +1,46 @@
 import { google } from 'googleapis';
-import { PubSub } from '@google-cloud/pubsub';
 import { env } from '../env';
 
-const pubsub = new PubSub();
-
-export function gmailClient(accessToken: string) {
-  const auth = new google.auth.OAuth2();
+export function gmailClientFromAccessToken(accessToken: string) {
+  const auth = new google.auth.OAuth2(env.GMAIL_CLIENT_ID, env.GMAIL_CLIENT_SECRET, env.GMAIL_REDIRECT_URI);
   auth.setCredentials({ access_token: accessToken });
   return google.gmail({ version: 'v1', auth });
 }
 
-export async function startWatch(accessToken: string, user: string) {
-  const gmail = gmailClient(accessToken);
+export async function startWatch(accessToken: string) {
+  const gmail = gmailClientFromAccessToken(accessToken);
   const res = await gmail.users.watch({
     userId: 'me',
-    requestBody: {
-      topicName: env.GMAIL_PUBSUB_TOPIC,
-      labelIds: ['INBOX']
-    }
+    requestBody: { topicName: env.GMAIL_PUBSUB_TOPIC, labelIds: ['INBOX'] }
   });
-  return res.data; // contains historyId and expiration
+  return res.data; // { historyId, expiration }
+}
+
+export async function getProfile(accessToken: string) {
+  const gmail = gmailClientFromAccessToken(accessToken);
+  const res = await gmail.users.getProfile({ userId: 'me' });
+  return res.data; // { emailAddress, historyId, messagesTotal, threadsTotal }
 }
 
 export async function listHistory(accessToken: string, startHistoryId: string) {
-  const gmail = gmailClient(accessToken);
-  const res = await gmail.users.history.list({ userId: 'me', startHistoryId });
-  return res.data.history ?? [];
+  const gmail = gmailClientFromAccessToken(accessToken);
+  let pageToken: string | undefined;
+  const out: any[] = [];
+  do {
+    const res = await gmail.users.history.list({
+      userId: 'me',
+      startHistoryId,
+      pageToken,
+      historyTypes: ['messageAdded', 'messageUpdated']
+    });
+    (res.data.history ?? []).forEach(h => out.push(h));
+    pageToken = res.data.nextPageToken || undefined;
+  } while (pageToken);
+  return out;
 }
 
 export async function getMessage(accessToken: string, id: string) {
-  const gmail = gmailClient(accessToken);
+  const gmail = gmailClientFromAccessToken(accessToken);
   const res = await gmail.users.messages.get({ userId: 'me', id, format: 'full' });
   return res.data;
 }
-

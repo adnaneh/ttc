@@ -7,19 +7,28 @@ export const zEnvFunctions = z.object({
 
   // Pinecone
   PINECONE_API_KEY: z.string(),
-  PINECONE_INDEX_NAME: z.string().optional(), // defaults in code
+  PINECONE_INDEX_NAME: z.string().optional(),
 
-  // Gmail OAuth (separate from Firebase Auth)
+  // Gmail OAuth
   GMAIL_CLIENT_ID: z.string(),
   GMAIL_CLIENT_SECRET: z.string(),
-  GMAIL_REDIRECT_URI: z.string(), // points to your Cloud Function callback
-  OAUTH_SUCCESS_REDIRECT: z.string().optional(), // where to send the user after connect
+  GMAIL_REDIRECT_URI: z.string(),
+  OAUTH_SUCCESS_REDIRECT: z.string().optional(),
 
-  // Models / telemetry (optional)
+  // Outlook OAuth & Webhook
+  MS_CLIENT_ID: z.string(),
+  MS_CLIENT_SECRET: z.string(),
+  MS_TENANT: z.string(), // "common" or your tenant id
+  MS_REDIRECT_URI: z.string(),
+  GRAPH_WEBHOOK_URL: z.string(),
+
+  // Models / telemetry
   OPENAI_API_KEY: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
   SENTRY_DSN: z.string().optional(),
+
+  // Token encryption
   KMS_KEY_RESOURCE: z.string().optional()
 });
 

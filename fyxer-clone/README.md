@@ -26,3 +26,15 @@
    - Wire Graph subscriptions (`/webhooks/graph`), set HTTPS trigger URL in Azure app
    - Replace embedding stub with your provider (OpenAI text-embedding, etc.)
 
+## Outlook/MS Graph setup
+1. Create an app in Azure App Registrations (multitenant or single-tenant).
+2. Add redirect URI: `https://REGION-PROJECT.cloudfunctions.net/authOutlookCallback`
+3. API permissions (delegated): `offline_access`, `Mail.Read`, `Mail.ReadWrite`, `User.Read` (grant admin consent if required).
+4. Put `MS_CLIENT_ID`, `MS_CLIENT_SECRET`, `MS_TENANT`, `MS_REDIRECT_URI` in Functions secrets.
+5. Set `GRAPH_WEBHOOK_URL` to your deployed `graphWebhook` HTTPS Function URL.
+6. Deploy Functions, visit `/connect`, click **Connect Outlook**.
+
+## KMS token encryption
+- Create a KeyRing + CryptoKey (symmetric).
+- Set `KMS_KEY_RESOURCE` to `projects/{project}/locations/{location}/keyRings/{ring}/cryptoKeys/{key}`.
+- In prod, keep `DEV_UNSAFE_TOKEN_CRYPTO=false` so tokens are never stored unencrypted.

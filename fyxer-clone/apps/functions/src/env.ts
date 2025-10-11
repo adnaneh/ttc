@@ -12,6 +12,12 @@ const raw = {
   GMAIL_REDIRECT_URI: process.env.GMAIL_REDIRECT_URI,
   OAUTH_SUCCESS_REDIRECT: process.env.OAUTH_SUCCESS_REDIRECT,
 
+  MS_CLIENT_ID: process.env.MS_CLIENT_ID,
+  MS_CLIENT_SECRET: process.env.MS_CLIENT_SECRET,
+  MS_TENANT: process.env.MS_TENANT,
+  MS_REDIRECT_URI: process.env.MS_REDIRECT_URI,
+  GRAPH_WEBHOOK_URL: process.env.GRAPH_WEBHOOK_URL,
+
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
@@ -21,7 +27,6 @@ const raw = {
 
 const parsed = zEnvFunctions.parse(raw);
 
-// Provide defaults that Zod didn’t enforce
 export const env = {
   ...parsed,
   PINECONE_INDEX_NAME: parsed.PINECONE_INDEX_NAME ?? 'fyxer-prod'

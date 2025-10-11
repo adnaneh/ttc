@@ -1,0 +1,11 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /mail/{mailboxId}/{allPaths=**} {
+      allow read, write: if false; // Only via signed URLs from Functions
+    }
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

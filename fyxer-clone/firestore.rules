@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+    function isSignedIn() { return request.auth != null; }
+    function inOrg(orgId) { return isSignedIn() && request.auth.token.orgId == orgId; }
+
+    match /orgs/{orgId}/{document=**} {
+      allow read, write: if inOrg(orgId);
+    }
+
+    match /users/{userId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

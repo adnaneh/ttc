@@ -1,0 +1,30 @@
+{
+  "name": "@fyxer/web",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "echo \"add eslint here\""
+  },
+  "dependencies": {
+    "next": "14.2.5",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "@tanstack/react-query": "^5.51.0",
+    "posthog-js": "^1.121.1",
+    "@sentry/nextjs": "^8.26.0",
+    "zod": "^3.23.8",
+    "ai": "^3.2.12",
+    "@ai-sdk/openai": "^0.0.35",
+    "class-variance-authority": "^0.7.0",
+    "lucide-react": "^0.441.0"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.13",
+    "postcss": "^8.4.41",
+    "autoprefixer": "^10.4.20",
+    "typescript": "^5.5.4"
+  }
+}

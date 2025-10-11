@@ -8,10 +8,10 @@ type GraphNotif = { value: Array<{ subscriptionId: string }> };
 
 export const graphWebhook = onRequest(async (req, res) => {
   const token = req.query.validationToken as string | undefined;
-  if (token) return res.status(200).send(token); // handshake
+  if (token) { res.status(200).send(token); return; } // handshake
 
   const body = req.body as GraphNotif;
-  if (!body?.value?.length) return res.status(202).end();
+  if (!body?.value?.length) { res.status(202).end(); return; }
 
   const subs = Array.from(new Set(body.value.map(v => v.subscriptionId)));
 
@@ -38,4 +38,5 @@ export const graphWebhook = onRequest(async (req, res) => {
   }
 
   res.status(202).end();
+  return;
 });

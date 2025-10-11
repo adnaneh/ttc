@@ -64,15 +64,16 @@ function mockSapFromExtracted(f: InvoiceFields): Record<string, any> {
 
 export const testInvoice = onRequest({ timeoutSeconds: 120, memory: '1GiB' }, async (req, res) => {
   cors(res);
-  if (req.method === 'OPTIONS') return res.status(204).end();
-  if (req.method !== 'POST') return res.status(405).send('POST a multipart/form-data with a PDF file (field name can be anything).');
+  if (req.method === 'OPTIONS') { res.status(204).end(); return; }
+  if (req.method !== 'POST') { res.status(405).send('POST a multipart/form-data with a PDF file (field name can be anything).'); return; }
 
   try {
     const mock = String(req.query.mock || '').toLowerCase() === '1' || String(req.query.mock || '').toLowerCase() === 'true';
     const { buffer, mimetype, filename } = await parseMultipart(req);
 
     if (!mimetype.includes('pdf')) {
-      return res.status(400).json({ error: 'Please upload a PDF (content-type application/pdf).' });
+      res.status(400).json({ error: 'Please upload a PDF (content-type application/pdf).' });
+      return;
     }
 
     // 1) Extract entities from PDF
@@ -98,7 +99,7 @@ export const testInvoice = onRequest({ timeoutSeconds: 120, memory: '1GiB' }, as
     const incoherences = sapRow ? findIncoherences(extracted, sapRow) : [];
     const matched = !!sapRow;
 
-    return res.status(200).json({
+    res.status(200).json({
       file: { filename, mimetype, bytes: buffer.length },
       extracted,
       sap: sapRow,
@@ -107,7 +108,9 @@ export const testInvoice = onRequest({ timeoutSeconds: 120, memory: '1GiB' }, as
       modelUsed: env.OPENAI_API_KEY ? 'regex + LLM' : 'regex-only',
       tolerance: env.AMOUNT_TOLERANCE
     });
+    return;
   } catch (e: any) {
-    return res.status(500).json({ error: String(e?.message || e) });
+    res.status(500).json({ error: String(e?.message || e) });
+    return;
   }
 });

@@ -13,11 +13,11 @@ async function embedQuery(q: string): Promise<number[]> {
 }
 
 export const search = onRequest(async (req, res) => {
-  if (req.method !== 'POST') return res.status(405).send('POST only');
+  if (req.method !== 'POST') { res.status(405).send('POST only'); return; }
   const body = typeof req.body === 'string' ? (() => { try { return JSON.parse(req.body || '{}'); } catch { return {}; } })() : (req.body || {});
   const { q, mailboxId, topK = 8, filter } = body as { q?: string; mailboxId?: string; topK?: number; filter?: Record<string, any> };
 
-  if (!q || !mailboxId) return res.status(400).json({ error: 'q and mailboxId are required' });
+  if (!q || !mailboxId) { res.status(400).json({ error: 'q and mailboxId are required' }); return; }
 
   const vector = await embedQuery(q);
   const matches = await queryVectors(mailboxId, vector, topK, filter);
@@ -32,5 +32,5 @@ export const search = onRequest(async (req, res) => {
   }));
 
   res.json({ results });
+  return;
 });
-

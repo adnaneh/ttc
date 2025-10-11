@@ -11,7 +11,7 @@ export function parseCorrectionsFromText(text: string) {
     const m = ln.match(/^\-\s*([a-zA-Z0-9_]+)\s*:\s*(.*?)\s*->\s*(.+)$/);
     if (m) {
       const field = m[1];
-      let value = m[3].trim();
+      let value: string | number = m[3].trim();
       if (/^\d+([.,]\d+)?$/.test(value)) value = Number(value.replace(',', '.'));
       corr[field] = value;
     }
@@ -23,7 +23,8 @@ export async function applyCorrectionsFromCase(caseId: string, corrections: Reco
   const cs = await db.collection('cases').doc(caseId).get();
   if (!cs.exists) throw new Error('case not found');
   const data = cs.data() as any;
-  const invoiceNo = data?.invoice?.invoiceNo || data?.sapSnapshot?.INVOICE_NO || undefined;
+  const invRaw = (data?.invoice?.invoiceNo ?? data?.sapSnapshot?.INVOICE_NO);
+  const invoiceNo = invRaw == null ? undefined : String(invRaw);
 
   const result = await applyInvoiceCorrections({ invoiceNo }, corrections);
   await cs.ref.update({
@@ -34,4 +35,3 @@ export async function applyCorrectionsFromCase(caseId: string, corrections: Reco
   });
   return result;
 }
-

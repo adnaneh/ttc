@@ -9,22 +9,23 @@
     "lint": "echo \"add eslint here\""
   },
   "dependencies": {
+    "@google-cloud/kms": "^5.2.0",
+    "@google-cloud/pubsub": "^5.2.0",
+    "@google-cloud/storage": "^7.17.2",
+    "@pinecone-database/pinecone": "^6.1.2",
+    "@sap/hana-client": "^2.26.18",
     "busboy": "^1.6.0",
-    "@google-cloud/kms": "^4.5.0",
-    "@google-cloud/pubsub": "^4.7.0",
-    "@google-cloud/storage": "^7.11.0",
-    "@pinecone-database/pinecone": "^2.2.0",
-    "@sap/hana-client": "^2.20.0",
-    "firebase-admin": "^12.6.0",
-    "firebase-functions": "^4.9.0",
-    "googleapis": "^131.0.0",
+    "firebase-admin": "^13.5.0",
+    "firebase-functions": "^6.5.0",
+    "googleapis": "^162.0.0",
     "mailparser": "^3.7.5",
-    "openai": "^4.63.0",
-    "pdf-parse": "^1.1.1",
-    "yaml": "^2.5.0",
-    "zod": "^3.23.8"
+    "openai": "^6.3.0",
+    "pdf-parse": "^2.2.9",
+    "yaml": "^2.8.1",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
-    "typescript": "^5.5.4"
+    "@types/pdf-parse": "^1.1.5",
+    "typescript": "^5.9.3"
   }
 }

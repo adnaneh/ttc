@@ -1,4 +1,4 @@
-import pdfParse from 'pdf-parse';
+import { PDFParse as pdfParse } from 'pdf-parse';
 import OpenAI from 'openai';
 import { env } from '../env';
 
@@ -77,4 +77,3 @@ Use null for unknown. Return ONLY JSON.`;
     return base;
   }
 }
-

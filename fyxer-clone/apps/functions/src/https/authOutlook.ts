@@ -17,10 +17,10 @@ export const authOutlookStart = onRequest(async (req, res) => {
 export const authOutlookCallback = onRequest(async (req, res) => {
   const code = req.query.code as string | undefined;
   const stateId = req.query.state as string | undefined;
-  if (!code || !stateId) return res.status(400).send('Missing code or state');
+  if (!code || !stateId) { res.status(400).send('Missing code or state'); return; }
 
   const stateSnap = await db.collection('oauthStates').doc(stateId).get();
-  if (!stateSnap.exists) return res.status(400).send('Invalid state');
+  if (!stateSnap.exists) { res.status(400).send('Invalid state'); return; }
   const state = stateSnap.data() as { userId: string };
 
   const tokens = await outlookExchangeCode(code);
@@ -70,4 +70,5 @@ export const authOutlookCallback = onRequest(async (req, res) => {
 
   const back = ensureUrl(env.OAUTH_SUCCESS_REDIRECT) ?? 'https://example.com/connected';
   res.redirect(302, `${back}?provider=outlook&email=${encodeURIComponent(email)}`);
+  return;
 });

@@ -31,10 +31,10 @@ export const authGmailStart = onRequest(async (req, res) => {
 export const authGmailCallback = onRequest(async (req, res) => {
   const code = req.query.code as string | undefined;
   const stateId = req.query.state as string | undefined;
-  if (!code || !stateId) return res.status(400).send('Missing code or state');
+  if (!code || !stateId) { res.status(400).send('Missing code or state'); return; }
 
   const stateSnap = await db.collection('oauthStates').doc(stateId).get();
-  if (!stateSnap.exists) return res.status(400).send('Invalid state');
+  if (!stateSnap.exists) { res.status(400).send('Invalid state'); return; }
   const state = stateSnap.data() as { userId: string };
 
   const oauth = gmailOAuthClient();
@@ -43,7 +43,7 @@ export const authGmailCallback = onRequest(async (req, res) => {
 
   // Identify Gmail account
   const prof = await getProfile(tokens.access_token!);
-  if (!prof.emailAddress) return res.status(400).send('Failed to fetch Gmail profile');
+  if (!prof.emailAddress) { res.status(400).send('Failed to fetch Gmail profile'); return; }
 
   // Create mailbox doc
   const mailboxRef = db.collection('mailboxes').doc();
@@ -75,5 +75,5 @@ export const authGmailCallback = onRequest(async (req, res) => {
   // Redirect user back to frontend
   const back = ensureUrl(env.OAUTH_SUCCESS_REDIRECT) ?? 'https://example.com/connected';
   res.redirect(302, `${back}?provider=gmail&email=${encodeURIComponent(prof.emailAddress)}`);
+  return;
 });
-

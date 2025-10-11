@@ -74,9 +74,9 @@ export async function fetchInvoiceByIdentifiers(ident: {
            ${ident.currency ? 'and CURRENCY = ?' : ''}
            ${date ? 'and INVOICE_DATE between add_days(to_date(?, \'YYYY-MM-DD\'), -7) and add_days(to_date(?, \'YYYY-MM-DD\'), 7)' : ''}
          order by UPDATED_AT desc`;
-      const params = [ident.vendorId, minAmt, maxAmt]
-        .concat(ident.currency ? [ident.currency] : [])
-        .concat(date ? [ident.invoiceDate, ident.invoiceDate] : []);
+      const params: any[] = [ident.vendorId as any, minAmt, maxAmt];
+      if (ident.currency) params.push(ident.currency);
+      if (date) params.push(ident.invoiceDate, ident.invoiceDate);
       const rows = await run(sql, params);
       if (rows.length) return rows[0];
     }
@@ -98,4 +98,3 @@ export async function applyInvoiceCorrections(where: { invoiceNo?: string; id?: 
       conn.exec(sql, params, (err: any, _rows: any) => err ? reject(err) : resolve({ updated: 1 })));
   });
 }
-

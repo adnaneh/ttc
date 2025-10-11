@@ -1,4 +1,4 @@
-import './globals.css';
+import '../styles/globals.css';
 import { Providers } from '@/components/providers';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -6,4 +6,3 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en"><body><Providers>{children}</Providers></body></html>
   );
 }
-

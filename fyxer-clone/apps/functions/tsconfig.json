@@ -2,9 +2,8 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "lib",
-    "rootDir": "src",
     "lib": ["ES2022", "DOM"],
     "types": ["node"]
   },
-  "include": ["src"]
+  "include": ["src", "../../packages/shared/src"]
 }

@@ -21,7 +21,15 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "type", "order": "ASCENDING" },
-        { "fieldPath": "sync.watchExpiration", "order": "ASCENDING" }
+        { "fieldPath": "sync.inbox.watchExpiration", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "mailboxes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "type", "order": "ASCENDING" },
+        { "fieldPath": "sync.sent.watchExpiration", "order": "ASCENDING" }
       ]
     }
   ],

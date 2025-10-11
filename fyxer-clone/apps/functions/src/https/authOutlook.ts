@@ -35,33 +35,39 @@ export const authOutlookCallback = onRequest(async (req, res) => {
     providerUserId: email,
     scopes: ['Mail.Read', 'Mail.ReadWrite', 'offline_access'],
     tokenRef: '',
-    sync: { deltaLink: '', subscriptionId: '', watchExpiration: 0 },
+    sync: {
+      inbox: { deltaLink: '', subscriptionId: '', watchExpiration: 0 },
+      sent:  { deltaLink: '', subscriptionId: '', watchExpiration: 0 }
+    },
     createdAt: Date.now()
   });
 
   const tokenRefPath = await saveOutlookTokens(mailboxRef.path, tokens);
   await mailboxRef.update({ tokenRef: tokenRefPath });
 
-  // Create webhook subscription (short TTL is fine; cron renews)
-  const expires = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // +1h
-  const sub = await createSubscription(tokens.access_token, env.GRAPH_WEBHOOK_URL, expires);
+  const expires = (hours: number) => new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+  const inboxSub = await createSubscription(tokens.access_token, env.GRAPH_WEBHOOK_URL, expires(1), 'Inbox');
+  const sentSub  = await createSubscription(tokens.access_token, env.GRAPH_WEBHOOK_URL, expires(1), 'SentItems');
+
   await mailboxRef.update({
-    'sync.subscriptionId': sub.id,
-    'sync.watchExpiration': Date.parse(sub.expirationDateTime)
+    'sync.inbox.subscriptionId': inboxSub.id,
+    'sync.inbox.watchExpiration': Date.parse(inboxSub.expirationDateTime),
+    'sync.sent.subscriptionId': sentSub.id,
+    'sync.sent.watchExpiration': Date.parse(sentSub.expirationDateTime)
   });
 
-  // Initialize delta link without backfill (snapshot → deltaLink)
+  // Initialize delta links for both folders (without backfill)
   const fresh = await getFreshGraphAccessTokenForMailbox(mailboxRef.path);
-  let page = await messagesDelta(fresh);
-  while (page['@odata.nextLink']) {
-    page = await messagesDelta(fresh, page['@odata.nextLink']);
-  }
-  const deltaLink = page['@odata.deltaLink'];
-  if (deltaLink) await mailboxRef.update({ 'sync.deltaLink': deltaLink });
+  let p = await messagesDelta(fresh, undefined, 'Inbox');
+  while (p['@odata.nextLink']) p = await messagesDelta(fresh, p['@odata.nextLink'], 'Inbox');
+  await mailboxRef.update({ 'sync.inbox.deltaLink': p['@odata.deltaLink'] || '' });
+
+  let q = await messagesDelta(fresh, undefined, 'SentItems');
+  while (q['@odata.nextLink']) q = await messagesDelta(fresh, q['@odata.nextLink'], 'SentItems');
+  await mailboxRef.update({ 'sync.sent.deltaLink': q['@odata.deltaLink'] || '' });
 
   await stateSnap.ref.delete().catch(() => {});
 
   const back = ensureUrl(env.OAUTH_SUCCESS_REDIRECT) ?? 'https://example.com/connected';
   res.redirect(302, `${back}?provider=outlook&email=${encodeURIComponent(email)}`);
 });
-

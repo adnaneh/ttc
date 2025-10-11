@@ -1,5 +1,5 @@
 import { gmailClientFromAccessToken } from '../connectors/gmail';
-import { saveMailBodyPtr } from './storage';
+import { saveBinaryPtr } from './storage';
 
 type Part = { filename?: string; mimeType?: string; body?: { attachmentId?: string; data?: string }; parts?: Part[] };
 
@@ -24,13 +24,12 @@ export async function downloadAndStoreGmailAttachments(params: {
   for (const a of attachments) {
     const attId = a.body!.attachmentId!;
     const res = await gmail.users.messages.attachments.get({ userId: 'me', messageId, id: attId });
-    const data = (res.data as any).data || '';
-    const buf = Buffer.from(String(data).replace(/-/g, '+').replace(/_/g, '/'), 'base64');
+    const data = res.data.data || '';
+    const buf = Buffer.from(data.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
     const safeName = encodeURIComponent(a.filename || 'file');
     const path = `attachments/${mailboxId}/${messageId}/${safeName}`;
-    const ptr = await saveMailBodyPtr(path, buf);
+    const ptr = await saveBinaryPtr(path, buf, a.mimeType);
     stored.push({ filename: a.filename || 'file', mimeType: a.mimeType, ptr });
   }
   return stored;
 }
-

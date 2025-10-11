@@ -12,13 +12,13 @@ export async function getMeProfile(token: string) {
   return res.json() as Promise<{ id: string; userPrincipalName: string; mail?: string }>;
 }
 
-export async function createSubscription(token: string, notificationUrl: string, expirationISO: string) {
+export async function createSubscription(token: string, notificationUrl: string, expirationISO: string, folder: 'Inbox'|'SentItems' = 'Inbox') {
   const res = await fetch(`${GRAPH}/subscriptions`, {
     method: 'POST',
     headers: authHeaders(token),
     body: JSON.stringify({
       changeType: "created,updated",
-      resource: "me/mailFolders('Inbox')/messages",
+      resource: `me/mailFolders('${folder}')/messages`,
       notificationUrl,
       expirationDateTime: expirationISO,
       clientState: "ok"
@@ -45,10 +45,18 @@ export async function getMessage(token: string, id: string) {
   return res.json() as Promise<any>;
 }
 
+export async function getMessageWithAttachments(token: string, id: string) {
+  const url = `${GRAPH}/me/messages/${id}?$select=id,conversationId,subject,from,toRecipients,ccRecipients,receivedDateTime,body`+
+            `&$expand=attachments($select=id,name,contentType,size,contentBytes,isInline)`;
+  const res = await fetch(url, { headers: authHeaders(token, { Prefer: 'outlook.body-content-type="html"' }) });
+  if (!res.ok) throw new Error(`Get message+attachments failed: ${res.status} ${await res.text()}`);
+  return res.json() as Promise<any>;
+}
+
 type DeltaResp = { value: any[]; '@odata.nextLink'?: string; '@odata.deltaLink'?: string };
 
-export async function messagesDelta(token: string, link?: string) {
-  const url = link ?? `${GRAPH}/me/mailFolders('Inbox')/messages/delta?$select=id,conversationId,subject,from,toRecipients,receivedDateTime,body`;
+export async function messagesDelta(token: string, link?: string, folder: 'Inbox'|'SentItems' = 'Inbox') {
+  const url = link ?? `${GRAPH}/me/mailFolders('${folder}')/messages/delta?$select=id,conversationId,subject,from,toRecipients,receivedDateTime,body`;
   const res = await fetch(url, { headers: authHeaders(token, { Prefer: 'outlook.body-content-type="html"' }) });
   if (!res.ok) throw new Error(`Delta failed: ${res.status} ${await res.text()}`);
   return res.json() as Promise<DeltaResp>;

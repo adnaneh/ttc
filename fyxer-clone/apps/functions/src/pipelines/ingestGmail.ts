@@ -62,7 +62,7 @@ export async function ingestFromGmail(accessToken: string, startHistoryId: strin
       const isPdf = (a.mimeType || '').includes('pdf') || (a.filename || '').toLowerCase().endsWith('.pdf');
       if (isPdf && msg.threadId) {
         await pubsub.topic('invoice.process').publishMessage({
-          json: { mailboxId, threadId: msg.threadId, messageId: msg.id, attachment: a }
+          json: { provider: 'gmail', mailboxId, threadId: msg.threadId, messageId: msg.id, attachment: a }
         });
       }
     }

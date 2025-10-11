@@ -1,4 +1,5 @@
 // HTTPS (Gmail & Outlook OAuth + Search)
+export { testInvoice } from './https/testInvoice';
 export { authGmailStart, authGmailCallback } from './https/authGmail';
 export { authOutlookStart, authOutlookCallback } from './https/authOutlook';
 export { search } from './https/search';

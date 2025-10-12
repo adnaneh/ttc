@@ -20,6 +20,16 @@ const SERVICES = {
     sets: ['A_BillingDocument', 'A_BillingDocumentItem'],
     outfile: 'invoices-billing.ts',
   },
+  API_CV_ATTACHMENT_SRV: {
+    sets: [
+      'A_DocumentInfoRecordAttch',
+      'AttachmentContentSet',
+      'AttachmentHarmonizedOperationSet',
+      'AttachmentForSAPObjectNodeTypeSet',
+      'SAPObjectDocumentTypeSet',
+    ],
+    outfile: 'attachments.ts',
+  },
 };
 
 const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
@@ -90,7 +100,6 @@ function toInterfaceName(entitySetName, entityTypeName) {
 function generateServiceModels(service, sets, outfile) {
   const { entityTypes, setToType } = parseMetadata(service);
   const lines = [];
-  // keep files minimal; no inline comments per repo guidance
   for (const setName of sets) {
     const fqType = setToType.get(setName);
     if (!fqType) { console.warn(`[warn] Set not found in metadata: ${service}::${setName}`); continue; }
@@ -107,6 +116,43 @@ function generateServiceModels(service, sets, outfile) {
     lines.push('}');
     lines.push('');
   }
+  if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
+  const outPath = path.join(OUT_DIR, outfile);
+  fs.writeFileSync(outPath, lines.join('\n'));
+  console.log(`[models] Wrote ${outPath}`);
+}
+
+function detectTsType(v) {
+  if (v === null || v === undefined) return 'any';
+  const t = typeof v;
+  if (t === 'boolean') return 'boolean';
+  if (t === 'number') return 'number';
+  if (t === 'string') return 'string';
+  if (t === 'object') return 'any';
+  return 'any';
+}
+
+function generateFromSample(service, sets, outfile) {
+  const lines = [];
+  for (const setName of sets) {
+    const samplePath = path.join(SAMPLES_DIR, service, `${setName}.json`);
+    if (!fs.existsSync(samplePath)) { console.warn(`[warn] No sample for ${service}::${setName}`); continue; }
+    const json = JSON.parse(fs.readFileSync(samplePath, 'utf8'));
+    const first = (((json || {}).d || {}).results || [])[0];
+    if (!first) { console.warn(`[warn] Empty sample for ${service}::${setName}`); continue; }
+    const ifaceName = setName;
+    lines.push(`export interface ${ifaceName} {`);
+    for (const k of Object.keys(first)) {
+      if (k === '__metadata') continue;
+      if (k.endsWith('Navigation')) continue; // skip nav in sample-driven
+      const tsType = detectTsType(first[k]);
+      const propName = /^[A-Za-z_][A-Za-z0-9_]*$/.test(k) ? k : JSON.stringify(k);
+      lines.push(`  ${propName}?: ${tsType};`);
+    }
+    lines.push('}');
+    lines.push('');
+  }
+  if (!lines.length) { throw new Error(`No models generated from samples for ${service}`); }
   if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
   const outPath = path.join(OUT_DIR, outfile);
   fs.writeFileSync(outPath, lines.join('\n'));

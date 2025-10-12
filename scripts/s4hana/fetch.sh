@@ -25,6 +25,7 @@ SERVICES=(
   API_PURCHASEORDER_PROCESS_SRV
   API_SUPPLIERINVOICE_PROCESS_SRV
   API_BILLING_DOCUMENT_SRV
+  API_CV_ATTACHMENT_SRV
 )
 
 get_base() {
@@ -41,6 +42,8 @@ get_base() {
       echo "https://sandbox.api.sap.com/s4hanacloud/sap/opu/odata/sap/API_SUPPLIERINVOICE_PROCESS_SRV" ;;
     API_BILLING_DOCUMENT_SRV)
       echo "https://sandbox.api.sap.com/s4hanacloud/sap/opu/odata/sap/API_BILLING_DOCUMENT_SRV" ;;
+    API_CV_ATTACHMENT_SRV)
+      echo "https://sandbox.api.sap.com/s4hanacloud/sap/opu/odata/sap/API_CV_ATTACHMENT_SRV" ;;
     *) return 1 ;;
   esac
 }
@@ -59,6 +62,8 @@ get_sets() {
       echo "A_SupplierInvoice A_SupplierInvoiceItemAsset A_SupplierInvoiceItemGLAcct A_SupplierInvoiceItemMaterial" ;;
     API_BILLING_DOCUMENT_SRV)
       echo "A_BillingDocument A_BillingDocumentItem" ;;
+    API_CV_ATTACHMENT_SRV)
+      echo "A_DocumentInfoRecordAttch AttachmentContentSet" ;;
     *) return 1 ;;
   esac
 }

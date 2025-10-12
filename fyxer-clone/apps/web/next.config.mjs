@@ -4,7 +4,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: { serverActions: { allowedOrigins: ['*'] } },
-  outputFileTracingRoot: path.join(__dirname, '..', '..')
+  experimental: { serverActions: { allowedOrigins: ['*'] } }
 };
 export default nextConfig;

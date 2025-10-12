@@ -8,6 +8,7 @@
     "dev:functions": "npm -w apps/functions run dev",
     "dev:web": "npm -w apps/web run dev",
     "emulators:kill": "bash scripts/kill_firebase_emulators.sh",
-    "emulators:start:clean": "npm run emulators:kill && firebase emulators:start"
+    "emulators:start:clean": "npm run emulators:kill && firebase emulators:start",
+    "deploy:functions": "npm -w packages/shared run build && npm -w apps/functions run build && firebase deploy --only functions"
   }
 }

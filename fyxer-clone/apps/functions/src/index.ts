@@ -1,3 +1,8 @@
+// Register path aliases for runtime resolution
+import { addAlias } from 'module-alias';
+import path from 'path';
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+addAlias('@shared', path.resolve(__dirname, '../../../packages/shared/lib'));
 // HTTPS (Gmail & Outlook OAuth + Search)
 export { testInvoice } from './https/testInvoice';
 export { authGmailStart, authGmailCallback } from './https/authGmail';

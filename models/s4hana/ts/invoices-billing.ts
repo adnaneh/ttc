@@ -1,6 +1,3 @@
-// Auto-generated from S/4HANA $metadata
-// Service: API_BILLING_DOCUMENT_SRV
-
 export interface A_BillingDocument {
   BillingDocument: string;
   SDDocumentCategory?: string;

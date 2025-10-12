@@ -56,7 +56,7 @@ get_sets() {
     API_PURCHASEORDER_PROCESS_SRV)
       echo "A_PurchaseOrder A_PurchaseOrderItem" ;;
     API_SUPPLIERINVOICE_PROCESS_SRV)
-      echo "A_SupplierInvoice A_SuplrInvcItem" ;;
+      echo "A_SupplierInvoice A_SupplierInvoiceItemAsset A_SupplierInvoiceItemGLAcct A_SupplierInvoiceItemMaterial" ;;
     API_BILLING_DOCUMENT_SRV)
       echo "A_BillingDocument A_BillingDocumentItem" ;;
     *) return 1 ;;

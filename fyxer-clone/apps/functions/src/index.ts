@@ -16,3 +16,5 @@ export { mailNormalize } from './triggers/mailNormalize';
 export { mailEmbed } from './triggers/mailEmbed';
 export { mailIndex } from './triggers/mailIndex';
 export { invoiceProcess } from './triggers/invoiceProcess';
+import { setGlobalOptions } from 'firebase-functions/v2/options';
+setGlobalOptions({ region: 'europe-west1' });

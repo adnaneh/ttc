@@ -1,6 +1,3 @@
-// Auto-generated from S/4HANA $metadata
-// Service: API_PURCHASEORDER_PROCESS_SRV
-
 export interface A_PurchaseOrder {
   PurchaseOrder: string;
   CompanyCode?: string;

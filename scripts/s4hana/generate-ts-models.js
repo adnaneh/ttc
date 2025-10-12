@@ -13,7 +13,7 @@ const SERVICES = {
     outfile: 'purchase-orders.ts',
   },
   API_SUPPLIERINVOICE_PROCESS_SRV: {
-    sets: ['A_SupplierInvoice', 'A_SuplrInvcItem'],
+    sets: ['A_SupplierInvoice', 'A_SupplierInvoiceItemAsset', 'A_SupplierInvoiceItemGLAcct', 'A_SupplierInvoiceItemMaterial'],
     outfile: 'invoices-supplier.ts',
   },
   API_BILLING_DOCUMENT_SRV: {
@@ -90,9 +90,7 @@ function toInterfaceName(entitySetName, entityTypeName) {
 function generateServiceModels(service, sets, outfile) {
   const { entityTypes, setToType } = parseMetadata(service);
   const lines = [];
-  lines.push('// Auto-generated from S/4HANA $metadata');
-  lines.push(`// Service: ${service}`);
-  lines.push('');
+  // keep files minimal; no inline comments per repo guidance
   for (const setName of sets) {
     const fqType = setToType.get(setName);
     if (!fqType) { console.warn(`[warn] Set not found in metadata: ${service}::${setName}`); continue; }
@@ -126,4 +124,3 @@ function main() {
 }
 
 main();
-

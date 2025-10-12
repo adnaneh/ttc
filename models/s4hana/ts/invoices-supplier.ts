@@ -1,6 +1,3 @@
-// Auto-generated from S/4HANA $metadata
-// Service: API_SUPPLIERINVOICE_PROCESS_SRV
-
 export interface A_SupplierInvoice {
   SupplierInvoice: string;
   FiscalYear: string;
@@ -87,4 +84,103 @@ export interface A_SupplierInvoice {
   JrnlEntryCntrySpecificDate5?: string;
   JrnlEntryCntrySpecificBP1?: string;
   JrnlEntryCntrySpecificBP2?: string;
+}
+
+export interface A_SupplierInvoiceItemAsset {
+  SupplierInvoice: string;
+  FiscalYear: string;
+  SupplierInvoiceItem: string;
+  CompanyCode?: string;
+  MasterFixedAsset?: string;
+  FixedAsset?: string;
+  ProfitCenter?: string;
+  GLAccount?: string;
+  DocumentCurrency?: string;
+  SupplierInvoiceItemAmount?: string;
+  TaxCode?: string;
+  TaxJurisdiction?: string;
+  TaxCountry?: string;
+  TaxDeterminationDate?: string;
+  DebitCreditCode?: string;
+  SupplierInvoiceItemText?: string;
+  AssignmentReference?: string;
+  IsNotCashDiscountLiable?: boolean;
+  AssetValueDate?: string;
+  QuantityUnit?: string;
+  SuplrInvcItmQtyUnitSAPCode?: string;
+  SuplrInvcItmQtyUnitISOCode?: string;
+  Quantity?: string;
+}
+
+export interface A_SupplierInvoiceItemGLAcct {
+  SupplierInvoice: string;
+  FiscalYear: string;
+  SupplierInvoiceItem: string;
+  CompanyCode?: string;
+  CostCenter?: string;
+  ControllingArea?: string;
+  BusinessArea?: string;
+  ProfitCenter?: string;
+  FunctionalArea?: string;
+  GLAccount?: string;
+  SalesOrder?: string;
+  SalesOrderItem?: string;
+  CostObject?: string;
+  CostCtrActivityType?: string;
+  BusinessProcess?: string;
+  WBSElement?: string;
+  DocumentCurrency?: string;
+  SupplierInvoiceItemAmount?: string;
+  TaxCode?: string;
+  PersonnelNumber?: string;
+  WorkItem?: string;
+  DebitCreditCode?: string;
+  TaxJurisdiction?: string;
+  SupplierInvoiceItemText?: string;
+  AssignmentReference?: string;
+  IsNotCashDiscountLiable?: boolean;
+  InternalOrder?: string;
+  ProjectNetwork?: string;
+  NetworkActivity?: string;
+  CommitmentItem?: string;
+  FundsCenter?: string;
+  TaxBaseAmountInTransCrcy?: string;
+  Fund?: string;
+  GrantID?: string;
+  QuantityUnit?: string;
+  SuplrInvcItmQtyUnitSAPCode?: string;
+  SuplrInvcItmQtyUnitISOCode?: string;
+  Quantity?: string;
+  PartnerBusinessArea?: string;
+  FinancialTransactionType?: string;
+  TaxCountry?: string;
+  EarmarkedFundsDocument?: string;
+  EarmarkedFundsDocumentItem?: string;
+  BudgetPeriod?: string;
+  ServiceDocument?: string;
+  ServiceDocumentItem?: string;
+  ServiceDocumentType?: string;
+}
+
+export interface A_SupplierInvoiceItemMaterial {
+  SupplierInvoice: string;
+  FiscalYear: string;
+  SupplierInvoiceItem: string;
+  Material?: string;
+  ValuationArea?: string;
+  CompanyCode?: string;
+  Plant?: string;
+  InventoryValuationType?: string;
+  TaxCode?: string;
+  TaxJurisdiction?: string;
+  TaxCountry?: string;
+  TaxDeterminationDate?: string;
+  DocumentCurrency?: string;
+  SupplierInvoiceItemAmount?: string;
+  QuantityUnit?: string;
+  SuplrInvcItmQtyUnitSAPCode?: string;
+  SuplrInvcItmQtyUnitISOCode?: string;
+  Quantity?: string;
+  DebitCreditCode?: string;
+  IsNotCashDiscountLiable?: boolean;
 }

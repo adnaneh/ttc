@@ -25,9 +25,6 @@ pnpm-debug.log*
 *.log
 
 # Environment files
-.env
-.env.*
-!.env.example
 
 # Tooling & caches
 .eslintcache

@@ -80,7 +80,7 @@ export default function TestInvoicePage() {
     error?: string;
   } | null>(null);
 
-  const fnBase = process.env.NEXT_PUBLIC_FUNCTIONS_URL!;
+  // Calls flow through our Next API proxy, no direct cross-origin requests
   async function onUpload() {
     // If no file is selected, prompt the file chooser
     if (!file) {
@@ -92,7 +92,7 @@ export default function TestInvoicePage() {
     try {
       const fd = new FormData();
       fd.append('invoice', file);
-      const url = `${fnBase}/testInvoice?mock=${mock ? '1' : '0'}`;
+      const url = `/api/testInvoice?mock=${mock ? '1' : '0'}`;
       const res = await fetch(url, { method: 'POST', body: fd });
       const json = await res.json();
       setResult(json);

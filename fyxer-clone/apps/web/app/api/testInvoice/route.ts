@@ -18,14 +18,13 @@ export async function POST(req: Request) {
   headers.delete('content-length');
   headers.delete('content-encoding');
 
-  const resp = await fetch(target, {
+  const init: any = {
     method: 'POST',
     headers,
-    // Node requires duplex when streaming a request body
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    duplex: 'half' as any,
-    body: req.body as any,
-  });
+    duplex: 'half',
+    body: req.body,
+  };
+  const resp = await fetch(target, init);
 
   return new Response(resp.body, {
     status: resp.status,

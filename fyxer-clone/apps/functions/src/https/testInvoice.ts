@@ -36,7 +36,13 @@ function parseMultipart(req: any): Promise<{ filename: string; buffer: Buffer; m
       resolve({ filename, buffer: Buffer.concat(fileBufs), mimetype });
     });
 
-    req.pipe(bb);
+    // Firebase Functions/Emulator sometimes exposes the full body on req.rawBody.
+    // If available, feed it directly to Busboy to avoid streaming/truncation issues.
+    if (req.rawBody && Buffer.isBuffer(req.rawBody)) {
+      bb.end(req.rawBody);
+    } else {
+      req.pipe(bb);
+    }
   });
 }
 

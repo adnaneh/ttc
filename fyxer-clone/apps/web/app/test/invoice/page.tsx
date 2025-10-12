@@ -53,6 +53,7 @@ export default function TestInvoicePage() {
   const [loading, setLoading] = useState(false);
   const [mapping, setMapping] = useState<Mapping>(DEFAULT_MAPPING);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
 
   // Load/save mapper from localStorage (per browser)
   useEffect(() => {
@@ -80,18 +81,21 @@ export default function TestInvoicePage() {
     error?: string;
   } | null>(null);
 
-  // Calls flow through our Next API proxy, no direct cross-origin requests
-  async function onUpload() {
-    // If no file is selected, prompt the file chooser
-    if (!file) {
-      fileInputRef.current?.click();
-      return;
-    }
+  // Maintain an object URL for opening the selected file in a new tab
+  useEffect(() => {
+    if (!file) { setFileUrl(null); return; }
+    const url = URL.createObjectURL(file);
+    setFileUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  // Analyze immediately after selection
+  async function analyze(selected: File) {
     setLoading(true);
     setResult(null);
     try {
       const fd = new FormData();
-      fd.append('invoice', file);
+      fd.append('invoice', selected);
       const url = `/api/testInvoice?mock=${mock ? '1' : '0'}`;
       const res = await fetch(url, { method: 'POST', body: fd });
       const json = await res.json();
@@ -164,17 +168,26 @@ export default function TestInvoicePage() {
             accept="application/pdf,image/png,image/jpeg"
             className="sr-only"
             aria-label="Invoice PDF or Image (PNG/JPEG)"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            onChange={(e) => {
+              const f = e.target.files?.[0] || null;
+              setFile(f);
+              if (f) analyze(f);
+            }}
           />
           <label className="inline-flex items-center gap-2 text-sm">
             <input type="checkbox" checked={mock} onChange={(e) => setMock(e.target.checked)} />
             Use mock SAP (no DB)
           </label>
-          <Button onClick={onUpload} disabled={loading}>
-            {loading ? 'Analyzing…' : (file ? 'Upload & Analyze' : 'Choose PDF/Image…')}
+          <Button onClick={() => fileInputRef.current?.click()}>
+            Choose PDF/Image…
           </Button>
         </div>
-        {file && <p className="text-xs opacity-70">Selected: {file.name} ({Math.round(file.size/1024)} KB)</p>}
+        {file && (
+          <p className="text-xs opacity-70">
+            Selected: <a className="underline" href={fileUrl || '#'} target="_blank" rel="noopener noreferrer">{file.name}</a>
+            {' '}({Math.round(file.size/1024)} KB){loading && ' – Analyzing…'}
+          </p>
+        )}
       </div>
 
       {/* Field Mapper */}
@@ -238,7 +251,14 @@ export default function TestInvoicePage() {
                 <p className="text-xs opacity-70 mt-1">Tolerance: {result.tolerance}</p>
               )}
               {result.file && (
-                <p className="text-xs opacity-70 mt-1">File: {result.file.filename} ({Math.round(result.file.bytes/1024)} KB)</p>
+                <p className="text-xs opacity-70 mt-1">
+                  File: {fileUrl ? (
+                    <a className="underline" href={fileUrl} target="_blank" rel="noopener noreferrer">{result.file.filename}</a>
+                  ) : (
+                    result.file.filename
+                  )}
+                  {' '}({Math.round(result.file.bytes/1024)} KB)
+                </p>
               )}
             </div>
 

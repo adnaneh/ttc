@@ -1,29 +1,36 @@
 export const runtime = 'nodejs';
 
+// Proxy the original multipart request body directly to the Cloud Function
+// to avoid any re-encoding issues that can cause Busboy to error with
+// "Unexpected end of form".
 export async function POST(req: Request) {
-  try {
-    const url = new URL(req.url);
-    const mock = url.searchParams.get('mock') ?? '1';
+  const url = new URL(req.url);
+  const mock = url.searchParams.get('mock') ?? '1';
 
-    const base = process.env.FUNCTIONS_URL || 'http://127.0.0.1:5001/demo-no-project/us-central1';
-    const target = `${base}/testInvoice?mock=${encodeURIComponent(mock)}`;
+  const base = process.env.FUNCTIONS_URL;
+  if (!base) return Response.json({ error: 'Missing FUNCTIONS_URL env var' }, { status: 500 });
 
-    const form = await req.formData();
-    const invoice = form.get('invoice');
-    if (!(invoice instanceof File)) {
-      return Response.json({ error: 'Missing invoice file' }, { status: 400 });
-    }
+  const target = `${base}/testInvoice?mock=${encodeURIComponent(mock)}`;
 
-    const fd = new FormData();
-    fd.append('invoice', invoice, (invoice as File).name);
+  // Forward headers, but drop hop-by-hop/problematic ones
+  const headers = new Headers(req.headers);
+  headers.delete('host');
+  headers.delete('content-length');
+  headers.delete('content-encoding');
 
-    const res = await fetch(target, { method: 'POST', body: fd });
-    const text = await res.text();
-    const contentType = res.headers.get('content-type') || 'application/json; charset=utf-8';
-    return new Response(text, { status: res.status, headers: { 'content-type': contentType } });
-  } catch (e: any) {
-    return Response.json({ error: String(e?.message || e) }, { status: 500 });
-  }
+  const resp = await fetch(target, {
+    method: 'POST',
+    headers,
+    // Node requires duplex when streaming a request body
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    duplex: 'half' as any,
+    body: req.body as any,
+  });
+
+  return new Response(resp.body, {
+    status: resp.status,
+    headers: { 'content-type': resp.headers.get('content-type') || 'application/json; charset=utf-8' }
+  });
 }
 
 export async function OPTIONS() {

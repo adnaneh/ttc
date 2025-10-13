@@ -31,7 +31,7 @@ export async function listHistory(accessToken: string, startHistoryId: string) {
       userId: 'me',
       startHistoryId,
       pageToken,
-      historyTypes: ['messageAdded', 'messageUpdated']
+      historyTypes: ['messageAdded']
     });
     (res.data.history ?? []).forEach(h => out.push(h));
     pageToken = res.data.nextPageToken || undefined;

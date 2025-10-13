@@ -3,6 +3,13 @@
     "source": "apps/functions",
     "runtime": "nodejs20"
   },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
   "emulators": {
     "functions": { "port": 5001 },
     "firestore": { "port": 8080 },

@@ -1,17 +1,30 @@
 // Global options MUST be set before any function definitions
 import { setGlobalOptions } from 'firebase-functions/v2/options';
-setGlobalOptions({ region: 'europe-west1' });
+setGlobalOptions({
+  region: 'europe-west1',
+  secrets: [
+    'OPENAI_API_KEY',
+    'PINECONE_API_KEY',
+    'GMAIL_CLIENT_SECRET',
+    'MS_CLIENT_SECRET'
+  ]
+});
 
 // Register path aliases for runtime resolution
 import { addAlias } from 'module-alias';
 import path from 'path';
 import fs from 'fs';
-// Load local env file only when not running on Cloud Run (emulator/local build)
+// Load local env files only when not running on Cloud Run (emulator/local build)
+// Load base .env first, then override with .env.local if present.
 if (!process.env.K_SERVICE) {
-  const localPath = fs.existsSync(path.resolve(__dirname, '../.env.local'))
-    ? path.resolve(__dirname, '../.env.local')
-    : path.resolve(__dirname, '../.env');
-  require('dotenv').config({ path: localPath });
+  const baseEnv = path.resolve(__dirname, '../.env');
+  if (fs.existsSync(baseEnv)) {
+    require('dotenv').config({ path: baseEnv });
+  }
+  const localEnv = path.resolve(__dirname, '../.env.local');
+  if (fs.existsSync(localEnv)) {
+    require('dotenv').config({ path: localEnv });
+  }
 }
 
 // Support monorepo (repo-root packages/shared/lib) and bundled fallback (lib/_shared)

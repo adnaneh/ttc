@@ -5,7 +5,6 @@ export const zEnvFunctions = z.object({
   GCS_BUCKET_MAIL: z.string(),
   GMAIL_PUBSUB_TOPIC: z.string(),
 
-  // Pinecone
   PINECONE_API_KEY: z.string(),
   PINECONE_INDEX_NAME: z.string().optional(),
 

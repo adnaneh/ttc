@@ -42,9 +42,15 @@ const FIELD_DESCRIPTORS: Array<{ key: keyof InvoiceFields; label: string }> = [
 function numOrNull(v: any): number | null {
   if (v == null) return null;
   if (typeof v === 'number' && isFinite(v)) return v;
-  const s = String(v).trim().replace(/[^\d.,-]/g, '').replace(/\.(?=.*\.)/g, '').replace(',', '.');
+  const raw = String(v);
+  if (!/[0-9]/.test(raw)) return null; // no digits → not a number
+  const s = raw.trim()
+    .replace(/[^\d.,-]/g, '')
+    .replace(/\.(?=.*\.)/g, '')
+    .replace(',', '.');
+  if (s === '' || s === '-' || s === '.' || s === '-.') return null;
   const n = Number(s);
-  return isFinite(n) ? n : null;
+  return Number.isFinite(n) ? n : null;
 }
 
 export default function TestInvoicePage() {
@@ -54,6 +60,7 @@ export default function TestInvoicePage() {
   const [mapping, setMapping] = useState<Mapping>(DEFAULT_MAPPING);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Load/save mapper from localStorage (per browser)
   useEffect(() => {
@@ -107,6 +114,22 @@ export default function TestInvoicePage() {
     }
   }
 
+  function isAllowedFile(f: File | null) {
+    if (!f) return false;
+    const t = f.type || '';
+    return t === 'application/pdf' || t.startsWith('image/');
+  }
+
+  function handlePickedFile(f: File | null) {
+    if (!f) return;
+    if (!isAllowedFile(f)) {
+      setResult({ error: 'Please choose a PDF or image (PNG/JPEG).' } as any);
+      return;
+    }
+    setFile(f);
+    analyze(f);
+  }
+
   const incMap = useMemo(() => {
     const m = new Map<string, Incoherence>();
     (result?.incoherences || []).forEach(i => m.set(i.field, i));
@@ -129,13 +152,15 @@ export default function TestInvoicePage() {
   }
 
   function diffBadge(key: keyof InvoiceFields, extracted: any, sapVal: any) {
+    // Only show numeric deltas for the amount field
+    if (key !== 'amount') return null;
     const n1 = numOrNull(extracted);
     const n2 = numOrNull(sapVal);
     if (n1 == null || n2 == null) return null;
     const d = +(n1 - n2).toFixed(2);
-    const within = Math.abs(d) <= tol;
-    const cls = within ? 'text-emerald-700' : 'text-red-700';
-    const bg  = within ? 'bg-emerald-50' : 'bg-red-50';
+    if (Math.abs(d) <= tol) return null; // hide zero/within tolerance
+    const cls = 'text-red-700';
+    const bg  = 'bg-red-50';
     return (
       <span className={`ml-2 text-xs px-2 py-0.5 rounded ${cls} ${bg}`}>
         Δ {d >= 0 ? '+' : ''}{d.toFixed(2)}
@@ -159,7 +184,18 @@ export default function TestInvoicePage() {
       <p className="text-sm opacity-80">Upload a PDF or image (PNG/JPEG) invoice → extract entities → compare with SAP (HANA). Configure your HANA column names below.</p>
 
       {/* Upload panel */}
-      <div className="rounded-md border p-4 space-y-3">
+      <div
+        className={`rounded-md border p-4 space-y-3 transition-colors ${isDragging ? 'border-blue-400 bg-blue-50' : ''}`}
+        onDragEnter={(e) => { e.preventDefault(); setIsDragging(true); }}
+        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; setIsDragging(true); }}
+        onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
+        onDrop={(e) => {
+          e.preventDefault();
+          setIsDragging(false);
+          const f = e.dataTransfer?.files?.[0] || null;
+          handlePickedFile(f);
+        }}
+      >
         <div className="flex flex-col md:flex-row md:items-center gap-3">
           <input
             ref={fileInputRef}
@@ -170,8 +206,7 @@ export default function TestInvoicePage() {
             aria-label="Invoice PDF or Image (PNG/JPEG)"
             onChange={(e) => {
               const f = e.target.files?.[0] || null;
-              setFile(f);
-              if (f) analyze(f);
+              handlePickedFile(f);
             }}
           />
           <label className="inline-flex items-center gap-2 text-sm">
@@ -182,6 +217,7 @@ export default function TestInvoicePage() {
             Choose PDF/Image…
           </Button>
         </div>
+        <p className="text-xs opacity-70">Drag and drop a PDF or image here, or click “Choose PDF/Image…”</p>
         {file && (
           <p className="text-xs opacity-70">
             Selected: <a className="underline" href={fileUrl || '#'} target="_blank" rel="noopener noreferrer">{file.name}</a>

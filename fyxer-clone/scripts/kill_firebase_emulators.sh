@@ -32,8 +32,18 @@ for p in "${PORTS[@]}"; do
   kill_port "$p"
 done
 
+# Kill any stray ngrok processes (to avoid "endpoint already online" conflicts)
+if pids=$(pgrep -f "(^|/)ngrok(\s|$)"); then
+  echo "Killing ngrok processes: $pids"
+  kill -TERM $pids 2>/dev/null || true
+  sleep 0.3
+  if pids2=$(pgrep -f "(^|/)ngrok(\s|$)"); then
+    echo "Force killing ngrok: $pids2"
+    kill -KILL $pids2 2>/dev/null || true
+  fi
+fi
+
 echo "Done. Current listeners on emulator ports:"
 for p in "${PORTS[@]}"; do
   lsof -nP -iTCP:"$p" -sTCP:LISTEN 2>/dev/null || true
 done
-

@@ -4,7 +4,7 @@ import { db } from '../util/firestore';
 import { readByPtr } from '../util/storage';
 import { upsertVectors } from '../util/pinecone';
 
-const openai = env.OPENAI_API_KEY ? new OpenAI({ apiKey: env.OPENAI_API_KEY }) : null;
+const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY });
 
 function stripHtml(html: string) {
   return html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ');

@@ -34,6 +34,7 @@ export { authGmailStart, authGmailCallback } from './https/authGmail';
 export { authOutlookStart, authOutlookCallback } from './https/authOutlook';
 export { search } from './https/search';
 export { gmailPushBridge } from './https/gmailPushBridge';
+export { rewatchGmail } from './https/rewatchGmail';
 
 // Webhooks / cron
 export { graphWebhook } from './webhooks/graphWebhook';

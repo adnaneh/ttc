@@ -6,7 +6,7 @@ export const zEnvFunctions = z.object({
   GMAIL_PUBSUB_TOPIC: z.string(),
 
   PINECONE_API_KEY: z.string(),
-  PINECONE_INDEX_NAME: z.string().optional(),
+  PINECONE_INDEX_NAME: z.string().default('fyxer-prod'),
 
   // Gmail OAuth
   GMAIL_CLIENT_ID: z.string(),
@@ -22,27 +22,38 @@ export const zEnvFunctions = z.object({
   GRAPH_WEBHOOK_URL: z.string(),
 
   // Models / telemetry
-  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_API_KEY: z.string(),
   ANTHROPIC_API_KEY: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
   SENTRY_DSN: z.string().optional(),
 
   // Token encryption
   KMS_KEY_RESOURCE: z.string().optional(),
+  DEV_UNSAFE_TOKEN_CRYPTO: z.coerce.boolean().default(false),
 
   // ----- SAP HANA -----
   HANA_HOST: z.string().optional(),
-  HANA_PORT: z.string().optional(),
+  HANA_PORT: z.coerce.number().optional(),
   HANA_USER: z.string().optional(),
   HANA_PASSWORD: z.string().optional(),
   HANA_SCHEMA: z.string().optional(),
-  HANA_INVOICES_VIEW: z.string().optional(),
-  HANA_SSL: z.string().optional(),
-  HANA_SSL_VALIDATE: z.string().optional(),
+  HANA_INVOICES_VIEW: z.string().default('INVOICES'),
+  HANA_SSL: z.coerce.boolean().optional(),
+  HANA_SSL_VALIDATE: z.coerce.boolean().optional(),
 
   // ----- Incoherence flow -----
-  INVOICE_NOTIFY_DEFAULT: z.string().optional(),
-  AMOUNT_TOLERANCE: z.string().optional()
+  INVOICE_NOTIFY_DEFAULT: z.string().default('maria.ttc@gmail.com'),
+  AMOUNT_TOLERANCE: z.coerce.number().default(0.01)
+}).extend({
+  // Emulator endpoints (optional)
+  PUBSUB_EMULATOR_HOST: z.string().optional(),
+  FIRESTORE_EMULATOR_HOST: z.string().optional(),
+  STORAGE_EMULATOR_HOST: z.string().optional(),
+
+  // Project id discovery / config blobs (optional)
+  GCLOUD_PROJECT: z.string().optional(),
+  GOOGLE_CLOUD_PROJECT: z.string().optional(),
+  FIREBASE_CONFIG: z.string().optional()
 });
 
 export type EnvFunctions = z.infer<typeof zEnvFunctions>;

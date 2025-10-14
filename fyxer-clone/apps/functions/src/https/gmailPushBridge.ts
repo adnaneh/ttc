@@ -1,5 +1,6 @@
 import { onRequest } from 'firebase-functions/v2/https';
 import { PubSub } from '@google-cloud/pubsub';
+import { env } from '../env';
 
 // Accepts Pub/Sub push and forwards payload to shared handler
 export const gmailPushBridge = onRequest(async (req, res) => {
@@ -13,9 +14,9 @@ export const gmailPushBridge = onRequest(async (req, res) => {
 
     if (!payload?.emailAddress || !payload?.historyId) { res.status(400).send('Invalid payload'); return; }
 
-    if (!process.env.PUBSUB_EMULATOR_HOST) { res.status(500).send('Pub/Sub emulator not configured'); return; }
+    if (!env.PUBSUB_EMULATOR_HOST) { res.status(500).send('Pub/Sub emulator not configured'); return; }
 
-    const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || (process.env.FIREBASE_CONFIG ? JSON.parse(String(process.env.FIREBASE_CONFIG)).projectId : undefined) || 'local';
+    const projectId = env.GCLOUD_PROJECT || env.GOOGLE_CLOUD_PROJECT || (env.FIREBASE_CONFIG ? JSON.parse(String(env.FIREBASE_CONFIG)).projectId : undefined) || 'local';
     const pubsub = new PubSub({ projectId });
     const topic = pubsub.topic('gmail-watch');
     // Ensure the topic exists in the emulator; ignore already exists errors

@@ -1,4 +1,4 @@
-import { zEnvFunctions } from '@shared/zodSchemas';
+import { zEnvFunctions, type EnvFunctions } from '@shared/zodSchemas';
 
 const raw = {
   GCS_BUCKET_MAIL: process.env.GCS_BUCKET_MAIL,
@@ -35,15 +35,20 @@ const raw = {
   HANA_SSL_VALIDATE: process.env.HANA_SSL_VALIDATE,
 
   INVOICE_NOTIFY_DEFAULT: process.env.INVOICE_NOTIFY_DEFAULT,
-  AMOUNT_TOLERANCE: process.env.AMOUNT_TOLERANCE
+  AMOUNT_TOLERANCE: process.env.AMOUNT_TOLERANCE,
+
+  // Dev-only toggles / emulator endpoints
+  DEV_UNSAFE_TOKEN_CRYPTO: process.env.DEV_UNSAFE_TOKEN_CRYPTO,
+  PUBSUB_EMULATOR_HOST: process.env.PUBSUB_EMULATOR_HOST,
+  FIRESTORE_EMULATOR_HOST: process.env.FIRESTORE_EMULATOR_HOST,
+  STORAGE_EMULATOR_HOST: process.env.STORAGE_EMULATOR_HOST,
+
+  // Project id discovery in emulators
+  GCLOUD_PROJECT: process.env.GCLOUD_PROJECT,
+  GOOGLE_CLOUD_PROJECT: process.env.GOOGLE_CLOUD_PROJECT,
+  FIREBASE_CONFIG: process.env.FIREBASE_CONFIG
 };
 
+// Eager validation; throws if anything required is missing.
 const parsed = zEnvFunctions.parse(raw);
-
-export const env = {
-  ...parsed,
-  PINECONE_INDEX_NAME: parsed.PINECONE_INDEX_NAME ?? 'fyxer-prod',
-  HANA_INVOICES_VIEW: parsed.HANA_INVOICES_VIEW ?? 'INVOICES',
-  INVOICE_NOTIFY_DEFAULT: parsed.INVOICE_NOTIFY_DEFAULT ?? 'maria.ttc@gmail.com',
-  AMOUNT_TOLERANCE: Number(parsed.AMOUNT_TOLERANCE ?? '0.01')
-};
+export const env: EnvFunctions = parsed;

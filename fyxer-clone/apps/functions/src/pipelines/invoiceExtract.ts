@@ -2,7 +2,7 @@ import { PDFParse as pdfParse } from 'pdf-parse';
 import OpenAI from 'openai';
 import { env } from '../env';
 
-const openai = env.OPENAI_API_KEY ? new OpenAI({ apiKey: env.OPENAI_API_KEY }) : null;
+const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY });
 
 export type InvoiceFields = {
   invoiceNo?: string;
@@ -55,8 +55,6 @@ export async function extractInvoiceFieldsFromPdf(buf: Buffer): Promise<InvoiceF
   const parsed = await pdfParse(buf);
   const base = regexExtract(parsed.text || '');
 
-  if (!openai) return base;
-
   // Use LLM to refine (robust to weird layouts)
   try {
     const prompt = `Extract invoice fields as strict JSON with keys:
@@ -79,8 +77,6 @@ Use null for unknown. Return ONLY JSON.`;
 }
 
 export async function extractInvoiceFieldsFromImage(buf: Buffer, mimetype = 'image/png'): Promise<InvoiceFields> {
-  if (!openai) throw new Error('OPENAI_API_KEY required for image extraction');
-
   const prompt = `Extract invoice fields as strict JSON with keys:
 { "invoiceNo": string?, "vendorId": string?, "vendorName": string?, "currency": string?, "amount": number?, "invoiceDate": "YYYY-MM-DD"?, "dueDate": "YYYY-MM-DD"?, "poNumber": string? }.
 Use null for unknown. Return ONLY JSON.`;

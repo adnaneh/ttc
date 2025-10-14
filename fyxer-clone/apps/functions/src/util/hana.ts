@@ -23,9 +23,9 @@ export async function withHana<T>(fn: (conn: HanaConn) => Promise<T>): Promise<T
     uid: env.HANA_USER,
     pwd: env.HANA_PASSWORD
   };
-  if (env.HANA_SSL === 'true') {
+  if (env.HANA_SSL) {
     params.encrypt = 'true';
-    params.sslValidateCertificate = env.HANA_SSL_VALIDATE === 'true';
+    params.sslValidateCertificate = !!env.HANA_SSL_VALIDATE;
   }
   await new Promise<void>((resolve, reject) => conn.connect(params, (err: any) => err ? reject(err) : resolve()));
   try {

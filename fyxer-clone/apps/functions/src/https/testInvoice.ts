@@ -83,7 +83,7 @@ export const testInvoice = onRequest({ timeoutSeconds: 120, memory: '1GiB' }, as
     if (mimetype.includes('pdf')) {
       // 1) Extract entities from PDF
       extracted = await extractInvoiceFieldsFromPdf(buffer);
-      modelUsed = process.env.OPENAI_API_KEY ? 'regex + LLM' : 'regex-only';
+      modelUsed = env.OPENAI_API_KEY ? 'regex + LLM' : 'regex-only';
     } else if (mimetype.startsWith('image/')) {
       // 1) Extract entities from image (vision)
       try {

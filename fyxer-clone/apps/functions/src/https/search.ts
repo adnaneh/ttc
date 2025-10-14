@@ -4,10 +4,9 @@ import { env } from '../env';
 import { db } from '../util/firestore';
 import { queryVectors } from '../util/pinecone';
 
-const openai = env.OPENAI_API_KEY ? new OpenAI({ apiKey: env.OPENAI_API_KEY }) : null;
+const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY });
 
 async function embedQuery(q: string): Promise<number[]> {
-  if (!openai) throw new Error('OPENAI_API_KEY not set');
   const res = await openai.embeddings.create({ model: 'text-embedding-3-small', input: q.slice(0, 7500) });
   return res.data[0].embedding as number[];
 }

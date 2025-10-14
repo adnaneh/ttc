@@ -12,7 +12,8 @@ export const invoiceProcess = onMessagePublished(
       const res = await processInvoiceAttachment(payload);
       logger.info('invoice.process done', { ...res, provider: payload.provider, threadId: payload.threadId, messageId: payload.messageId });
     } catch (e: any) {
-      logger.error('invoice.process failed', { err: String(e?.message || e) });
+      const msg = String(e?.message || e);
+      logger.error(`invoice.process failed: ${msg}`);
     }
   }
 );

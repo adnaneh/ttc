@@ -6,7 +6,7 @@ import { db } from '../util/firestore';
 import { google } from 'googleapis';
 import { parseCorrectionsFromText, applyCorrectionsFromCase } from '../util/corrections';
 
-export const gmailPush = onMessagePublished('gmail-watch', async (event) => {
+export const gmailPush = onMessagePublished({ topic: 'gmail-watch', memory: '512MiB', timeoutSeconds: 300 }, async (event) => {
   const raw = event.data?.message?.data ? JSON.parse(Buffer.from(event.data.message.data, 'base64').toString()) : {};
   const emailAddress: string | undefined = raw.emailAddress;
   const historyId: string | undefined = raw.historyId ? String(raw.historyId) : undefined;

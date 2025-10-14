@@ -11,7 +11,9 @@
    - Create a GCS bucket for mail bodies (set `GCS_BUCKET_MAIL`)
    - `firebase deploy --only firestore:indexes,firestore:rules,storage`
 3. **Functions env**
-   - Copy `apps/functions/.env.example` → `.env.local` (for emulator/dev) or set secrets via `firebase functions:secrets:set`
+   - Copy `apps/functions/.env.example` → `apps/functions/.env.local` for local/emulator.
+   - The Emulator auto-loads `.env` and `.env.local` — no code changes needed.
+   - For prod, set runtime environment variables (not Secrets) in Cloud Functions/Run using values from `apps/functions/.env.local`. See “Prod env” below.
    - `npm -w apps/functions run build` then `firebase emulators:start`
 4. **Web app**
    - Copy `apps/web/.env.example` → `.env.local` and set `NEXT_PUBLIC_POSTHOG_KEY`, provider API keys (server runtime)
@@ -27,7 +29,7 @@
    - Replace embedding stub with your provider (OpenAI text-embedding, etc.)
 
 ## SAP HANA invoice flow
-- Set Functions secrets for HANA connectivity: `HANA_HOST`, `HANA_PORT`, `HANA_USER`, `HANA_PASSWORD`, `HANA_SCHEMA`, `HANA_INVOICES_VIEW` (defaults to `INVOICES`), and SSL flags if needed.
+- Set Functions runtime env for HANA connectivity: `HANA_HOST`, `HANA_PORT`, `HANA_USER`, `HANA_PASSWORD`, `HANA_SCHEMA`, `HANA_INVOICES_VIEW` (defaults to `INVOICES`), and SSL flags if needed.
 - Add Pub/Sub topic: `invoice.process`.
 - When a Gmail/Outlook message with an invoice attachment (PDF or common image like PNG/JPEG) arrives, the system stores the file in GCS, extracts fields (PDF: regex + optional LLM; images: vision LLM requires `OPENAI_API_KEY`), looks up the invoice in HANA, and if any incoherence is found, drafts a reply in the thread to `INVOICE_NOTIFY_DEFAULT` (defaults to `maria.ttc@gmail.com`).
 - When the user sends that draft, the next Gmail push parses the corrections from the message and applies them to HANA with prepared statements.
@@ -36,7 +38,7 @@
 1. Create an app in Azure App Registrations (multitenant or single-tenant).
 2. Add redirect URI: `https://REGION-PROJECT.cloudfunctions.net/authOutlookCallback`
 3. API permissions (delegated): `offline_access`, `Mail.Read`, `Mail.ReadWrite`, `User.Read` (grant admin consent if required).
-4. Put `MS_CLIENT_ID`, `MS_CLIENT_SECRET`, `MS_TENANT`, `MS_REDIRECT_URI` in Functions secrets.
+4. Put `MS_CLIENT_ID`, `MS_CLIENT_SECRET`, `MS_TENANT`, `MS_REDIRECT_URI` in Functions runtime environment variables.
 5. Set `GRAPH_WEBHOOK_URL` to your deployed `graphWebhook` HTTPS Function URL.
 6. Deploy Functions, visit `/connect`, click **Connect Outlook**.
 
@@ -44,3 +46,18 @@
 - Create a KeyRing + CryptoKey (symmetric).
 - Set `KMS_KEY_RESOURCE` to `projects/{project}/locations/{location}/keyRings/{ring}/cryptoKeys/{key}`.
 - In prod, keep `DEV_UNSAFE_TOKEN_CRYPTO=false` so tokens are never stored unencrypted.
+
+## Prod env
+- Where to view/edit:
+  - Cloud Console → Cloud Run → select a function service → “Variables & Secrets”.
+  - Or Cloud Console → Cloud Functions → select function → “Variables & Secrets”.
+- Recommended variables to set as plain env vars:
+  - `OPENAI_API_KEY`, `PINECONE_API_KEY`
+  - `GMAIL_CLIENT_SECRET`, `MS_CLIENT_SECRET`
+  - `KMS_KEY_RESOURCE`
+  - `HANA_*` keys
+- Seed from repo files:
+  - Use `apps/functions/.env.local` during local dev; copy needed values into Cloud Run env vars for prod.
+- Optional automation:
+  - Run `apps/functions/scripts/push_env_to_cloud_run.sh --region europe-west1 --project <projectId>` to push values to all function services.
+  - Note: If services currently use Secrets, the script tries to replace them with env vars. If it errors, use the Console to remove Secrets and add env vars in a single edit/deploy.

@@ -7,6 +7,7 @@
     "lint": "echo \"add your linter here\"",
     "dev:functions": "npm -w apps/functions run dev",
     "dev:web": "npm -w apps/web run dev",
+    "bridge": "npm run emulators:start:clean",
     "emulators:kill": "bash scripts/kill_firebase_emulators.sh",
     "emulators:start:clean": "npm run emulators:kill && firebase emulators:start",
     "deploy:functions": "npm -w packages/shared run build && npm -w apps/functions run build && mkdir -p apps/functions/lib/_shared && cp -R packages/shared/lib/* apps/functions/lib/_shared/ && firebase use the-trading-company-001 && firebase deploy --only functions"

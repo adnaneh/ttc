@@ -5,24 +5,28 @@ export const zEnvFunctions = z.object({
   GCS_BUCKET_MAIL: z.string(),
   GMAIL_PUBSUB_TOPIC: z.string(),
 
-  PINECONE_API_KEY: z.string(),
+  // Provided via Cloud Secrets in prod; optional for emulator
+  PINECONE_API_KEY: z.string().optional(),
   PINECONE_INDEX_NAME: z.string().default('fyxer-prod'),
 
   // Gmail OAuth
   GMAIL_CLIENT_ID: z.string(),
-  GMAIL_CLIENT_SECRET: z.string(),
+  // Secret in prod
+  GMAIL_CLIENT_SECRET: z.string().optional(),
   GMAIL_REDIRECT_URI: z.string(),
   OAUTH_SUCCESS_REDIRECT: z.string().optional(),
 
   // Outlook OAuth & Webhook
   MS_CLIENT_ID: z.string(),
-  MS_CLIENT_SECRET: z.string(),
+  // Secret in prod
+  MS_CLIENT_SECRET: z.string().optional(),
   MS_TENANT: z.string(), // "common" or your tenant id
   MS_REDIRECT_URI: z.string(),
   GRAPH_WEBHOOK_URL: z.string(),
 
   // Models / telemetry
-  OPENAI_API_KEY: z.string(),
+  // Secret in prod
+  OPENAI_API_KEY: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
   SENTRY_DSN: z.string().optional(),
@@ -43,8 +47,8 @@ export const zEnvFunctions = z.object({
 
   // ----- Incoherence flow -----
   INVOICE_NOTIFY_DEFAULT: z.string().default('maria.ttc@gmail.com'),
-  AMOUNT_TOLERANCE: z.coerce.number().default(0.01)
-}).extend({
+  AMOUNT_TOLERANCE: z.coerce.number().default(0.01),
+
   // Emulator endpoints (optional)
   PUBSUB_EMULATOR_HOST: z.string().optional(),
   FIRESTORE_EMULATOR_HOST: z.string().optional(),

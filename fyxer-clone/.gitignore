@@ -11,6 +11,10 @@ packages/*/lib/
 .turbo/
 .vercel/
 
+# Prevent compiled JS artifacts in TS source trees
+packages/**/src/**/*.js
+packages/**/src/**/*.js.map
+
 # TypeScript
 *.tsbuildinfo
 

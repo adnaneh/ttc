@@ -4,6 +4,7 @@ import { db } from '../util/firestore';
 import { extractHtmlFromPayload } from '../util/gmailBody';
 import { PubSub } from '@google-cloud/pubsub';
 import { downloadAndStoreGmailAttachments } from '../util/gmailAttachments';
+import { logger } from '../util/logger';
 
 const pubsub = new PubSub();
 
@@ -13,8 +14,7 @@ export async function ingestFromGmail(accessToken: string, startHistoryId: strin
   const seen = new Set<string>();
   for (const h of history) {
     const added = (h.messagesAdded ?? []).map((x: any) => x.message?.id).filter(Boolean);
-    const updated = (h.messages ?? []).map((x: any) => x.id).filter(Boolean);
-    [...new Set([...added, ...updated])].forEach(id => seen.add(String(id)));
+    [...new Set(added)].forEach(id => seen.add(String(id)));
   }
 
   for (const msgId of seen) {

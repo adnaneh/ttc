@@ -1,6 +1,5 @@
 import { onRequest } from 'firebase-functions/v2/https';
 import { db } from '../util/firestore';
-import { env } from '../env';
 import { outlookAuthUrl, outlookExchangeCode, saveOutlookTokens, getFreshGraphAccessTokenForMailbox } from '../util/tokenStore';
 import { getMeProfile, createSubscription, messagesDelta } from '../connectors/outlook';
 
@@ -46,8 +45,8 @@ export const authOutlookCallback = onRequest(async (req, res) => {
   await mailboxRef.update({ tokenRef: tokenRefPath });
 
   const expires = (hours: number) => new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
-  const inboxSub = await createSubscription(tokens.access_token, env.GRAPH_WEBHOOK_URL, expires(1), 'Inbox');
-  const sentSub  = await createSubscription(tokens.access_token, env.GRAPH_WEBHOOK_URL, expires(1), 'SentItems');
+  const inboxSub = await createSubscription(tokens.access_token, process.env.GRAPH_WEBHOOK_URL!, expires(1), 'Inbox');
+  const sentSub  = await createSubscription(tokens.access_token, process.env.GRAPH_WEBHOOK_URL!, expires(1), 'SentItems');
 
   await mailboxRef.update({
     'sync.inbox.subscriptionId': inboxSub.id,
@@ -68,7 +67,7 @@ export const authOutlookCallback = onRequest(async (req, res) => {
 
   await stateSnap.ref.delete().catch(() => {});
 
-  const back = ensureUrl(env.OAUTH_SUCCESS_REDIRECT) ?? 'https://example.com/connected';
+  const back = ensureUrl(process.env.OAUTH_SUCCESS_REDIRECT) ?? 'https://example.com/connected';
   res.redirect(302, `${back}?provider=outlook&email=${encodeURIComponent(email)}`);
   return;
 });

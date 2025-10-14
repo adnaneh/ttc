@@ -1,11 +1,10 @@
-import { env } from '../env';
 import type { InvoiceFields } from '../pipelines/invoiceExtract';
 
 export type Incoherence = { field: string; sap: any; email: any; suggested?: any };
 
 export function findIncoherences(email: InvoiceFields, sap: Record<string, any>): Incoherence[] {
   const inc: Incoherence[] = [];
-  const tol = env.AMOUNT_TOLERANCE ?? 0.01;
+  const tol = process.env.AMOUNT_TOLERANCE ? Number(process.env.AMOUNT_TOLERANCE) : 0.01;
 
   const checks: Array<[string, any, any, (a: any, b: any) => boolean]> = [
     ['invoiceNo', sap.INVOICE_NO, email.invoiceNo, (a,b) => !!a && !!b && String(a) === String(b)],
@@ -24,4 +23,3 @@ export function findIncoherences(email: InvoiceFields, sap: Record<string, any>)
   }
   return inc;
 }
-

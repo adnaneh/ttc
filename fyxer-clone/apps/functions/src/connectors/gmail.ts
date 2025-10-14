@@ -1,8 +1,11 @@
 import { google } from 'googleapis';
-import { env } from '../env';
 
 export function gmailClientFromAccessToken(accessToken: string) {
-  const auth = new google.auth.OAuth2(env.GMAIL_CLIENT_ID, env.GMAIL_CLIENT_SECRET, env.GMAIL_REDIRECT_URI);
+  const auth = new google.auth.OAuth2(
+    process.env.GMAIL_CLIENT_ID,
+    process.env.GMAIL_CLIENT_SECRET,
+    process.env.GMAIL_REDIRECT_URI
+  );
   auth.setCredentials({ access_token: accessToken });
   return google.gmail({ version: 'v1', auth });
 }
@@ -11,7 +14,7 @@ export async function startWatch(accessToken: string) {
   const gmail = gmailClientFromAccessToken(accessToken);
   const res = await gmail.users.watch({
     userId: 'me',
-    requestBody: { topicName: env.GMAIL_PUBSUB_TOPIC, labelIds: ['INBOX'] }
+    requestBody: { topicName: process.env.GMAIL_PUBSUB_TOPIC!, labelIds: ['INBOX'] }
   });
   return res.data; // { historyId, expiration }
 }

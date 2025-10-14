@@ -1,17 +1,16 @@
 import { Pinecone } from '@pinecone-database/pinecone';
-import { env } from '../env';
 
 let pc: Pinecone | null = null;
 function getPc() {
   if (!pc) {
-    if (!env.PINECONE_API_KEY) throw new Error('PINECONE_API_KEY not set');
-    pc = new Pinecone({ apiKey: env.PINECONE_API_KEY });
+    if (!process.env.PINECONE_API_KEY) throw new Error('PINECONE_API_KEY not set');
+    pc = new Pinecone({ apiKey: process.env.PINECONE_API_KEY });
   }
   return pc;
 }
 
 function getIndex() {
-  return getPc().index(env.PINECONE_INDEX_NAME);
+  return getPc().index(process.env.PINECONE_INDEX_NAME || 'fyxer-prod');
 }
 
 export type VectorUpsert = { id: string; values: number[]; metadata?: Record<string, any> };

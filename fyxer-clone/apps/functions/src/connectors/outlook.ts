@@ -1,5 +1,3 @@
-import { env } from '../env';
-
 const GRAPH = 'https://graph.microsoft.com/v1.0';
 
 function authHeaders(token: string, extra?: Record<string, string>) {

@@ -1,9 +1,8 @@
 import { Storage } from '@google-cloud/storage';
-import { env } from '../env';
 import type { Readable } from 'node:stream';
 
 function getMailBucket() {
-  const name = String(env.GCS_BUCKET_MAIL || '');
+  const name = String(process.env.GCS_BUCKET_MAIL || '');
   if (!name) throw new Error('GCS_BUCKET_MAIL is required');
   const storage = new Storage();
   return storage.bucket(name);
@@ -16,7 +15,7 @@ export async function saveMailBodyPtr(path: string, data: Buffer | string) {
     resumable: false,
     contentType: 'text/html; charset=utf-8'
   });
-  return `gs://${env.GCS_BUCKET_MAIL}/${path}`;
+  return `gs://${process.env.GCS_BUCKET_MAIL}/${path}`;
 }
 
 // Save binary buffers (attachments) with resumable uploads
@@ -26,7 +25,7 @@ export async function saveBinaryPtr(path: string, data: Buffer, contentType?: st
     resumable: true,
     contentType: contentType || 'application/octet-stream'
   });
-  return `gs://${env.GCS_BUCKET_MAIL}/${path}`;
+  return `gs://${process.env.GCS_BUCKET_MAIL}/${path}`;
 }
 
 // Save plaintext with correct content-type
@@ -36,7 +35,7 @@ export async function saveTextPtr(path: string, data: Buffer | string) {
     resumable: false,
     contentType: 'text/plain; charset=utf-8'
   });
-  return `gs://${env.GCS_BUCKET_MAIL}/${path}`;
+  return `gs://${process.env.GCS_BUCKET_MAIL}/${path}`;
 }
 
 // Save a Node Readable stream to GCS with resumable upload
@@ -51,13 +50,13 @@ export async function saveToGCSStream(path: string, readable: Readable, contentT
     ws.on('finish', resolve);
     ws.on('error', reject);
   });
-  return `gs://${env.GCS_BUCKET_MAIL}/${path}`;
+  return `gs://${process.env.GCS_BUCKET_MAIL}/${path}`;
 }
 
 export async function readByPtr(ptr: string): Promise<Buffer> {
   // ptr format: gs://bucket/path/to/file
   if (!ptr.startsWith('gs://')) throw new Error(`Invalid GCS pointer: ${ptr}`);
-  const prefix = `gs://${env.GCS_BUCKET_MAIL}/`;
+  const prefix = `gs://${process.env.GCS_BUCKET_MAIL}/`;
   if (!ptr.startsWith(prefix)) {
     throw new Error(`Unexpected bucket in ptr: ${ptr}`);
   }
@@ -72,7 +71,7 @@ export async function readByPtr(ptr: string): Promise<Buffer> {
 export async function readPartialByPtr(ptr: string, maxBytes: number): Promise<Buffer> {
   if (maxBytes <= 0) return Buffer.alloc(0);
   if (!ptr.startsWith('gs://')) throw new Error(`Invalid GCS pointer: ${ptr}`);
-  const prefix = `gs://${env.GCS_BUCKET_MAIL}/`;
+  const prefix = `gs://${process.env.GCS_BUCKET_MAIL}/`;
   if (!ptr.startsWith(prefix)) {
     throw new Error(`Unexpected bucket in ptr: ${ptr}`);
   }
@@ -86,7 +85,7 @@ export async function readPartialByPtr(ptr: string, maxBytes: number): Promise<B
 // Create a read stream for a GCS object by gs:// pointer.
 export function streamByPtr(ptr: string) {
   if (!ptr.startsWith('gs://')) throw new Error(`Invalid GCS pointer: ${ptr}`);
-  const prefix = `gs://${env.GCS_BUCKET_MAIL}/`;
+  const prefix = `gs://${process.env.GCS_BUCKET_MAIL}/`;
   if (!ptr.startsWith(prefix)) {
     throw new Error(`Unexpected bucket in ptr: ${ptr}`);
   }

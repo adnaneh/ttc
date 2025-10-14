@@ -1,17 +1,14 @@
 import OpenAI from 'openai';
-import { env } from '../env';
 import { db } from '../util/firestore';
 import { readByPtr } from '../util/storage';
 import { upsertVectors } from '../util/pinecone';
-
-const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY });
 
 function stripHtml(html: string) {
   return html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ');
 }
 
 async function embedText(text: string): Promise<number[]> {
-  if (!openai) throw new Error('OPENAI_API_KEY not set');
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const res = await openai.embeddings.create({
     model: 'text-embedding-3-small',
     input: text.slice(0, 7500)

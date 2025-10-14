@@ -4,7 +4,6 @@ import { findIncoherences } from '../util/invoiceCompare';
 import { createGmailDraftReply } from '../util/gmailDraft';
 import { createOutlookDraftReply } from '../util/outlookDraft';
 import { db } from '../util/firestore';
-import { env } from '../env';
 import { readByPtr } from '../util/storage';
 import { getFreshAccessTokenForMailbox, getFreshGraphAccessTokenForMailbox } from '../util/tokenStore';
 import { google } from 'googleapis';
@@ -56,7 +55,7 @@ export async function processInvoiceAttachment(args: {
 
   // Build case and draft
   const caseRef = db.collection('cases').doc();
-  const notifyTo = env.INVOICE_NOTIFY_DEFAULT;
+  const notifyTo = process.env.INVOICE_NOTIFY_DEFAULT || 'maria.ttc@gmail.com';
   const subject = `Invoice inconsistency: ${fields.invoiceNo || args.attachment.filename}`;
 
   const lines = [`FYXER-CASE-ID: ${caseRef.id}`, ``,

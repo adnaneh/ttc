@@ -5,7 +5,6 @@ import { extractInvoiceFieldsFromPdf, type InvoiceFields } from '../pipelines/in
 import { extractInvoiceFieldsFromImage } from '../pipelines/invoiceExtract';
 import { fetchInvoiceByIdentifiers } from '../util/hana';
 import { findIncoherences } from '../util/invoiceCompare';
-import { env } from '../env';
 
 function cors(res: any) {
   res.set('Access-Control-Allow-Origin', '*');
@@ -83,7 +82,7 @@ export const testInvoice = onRequest({ timeoutSeconds: 120, memory: '1GiB' }, as
     if (mimetype.includes('pdf')) {
       // 1) Extract entities from PDF
       extracted = await extractInvoiceFieldsFromPdf(buffer);
-      modelUsed = env.OPENAI_API_KEY ? 'regex + LLM' : 'regex-only';
+      modelUsed = process.env.OPENAI_API_KEY ? 'regex + LLM' : 'regex-only';
     } else if (mimetype.startsWith('image/')) {
       // 1) Extract entities from image (vision)
       try {
@@ -100,7 +99,7 @@ export const testInvoice = onRequest({ timeoutSeconds: 120, memory: '1GiB' }, as
 
     // 2) Look up SAP (or mock)
     let sapRow: Record<string, any> | null = null;
-    if (mock || !env.HANA_HOST || !env.HANA_USER) {
+    if (mock || !process.env.HANA_HOST || !process.env.HANA_USER) {
       sapRow = mockSapFromExtracted(extracted);
     } else {
       sapRow = await fetchInvoiceByIdentifiers({
@@ -125,7 +124,7 @@ export const testInvoice = onRequest({ timeoutSeconds: 120, memory: '1GiB' }, as
       matched,
       incoherences,
       modelUsed,
-      tolerance: env.AMOUNT_TOLERANCE
+      tolerance: (process.env.AMOUNT_TOLERANCE ? Number(process.env.AMOUNT_TOLERANCE) : 0.01)
     });
     return;
   } catch (e: any) {

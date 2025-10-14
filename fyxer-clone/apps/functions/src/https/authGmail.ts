@@ -1,6 +1,5 @@
 import { onRequest } from 'firebase-functions/v2/https';
 import { db } from '../util/firestore';
-import { env } from '../env';
 import { gmailOAuthClient, saveGmailTokens } from '../util/tokenStore';
 import { getProfile, startWatch } from '../connectors/gmail';
 
@@ -73,7 +72,7 @@ export const authGmailCallback = onRequest(async (req, res) => {
   await stateSnap.ref.delete().catch(() => { /* ignore */ });
 
   // Redirect user back to frontend
-  const back = ensureUrl(env.OAUTH_SUCCESS_REDIRECT) ?? 'https://example.com/connected';
+  const back = ensureUrl(process.env.OAUTH_SUCCESS_REDIRECT) ?? 'https://example.com/connected';
   res.redirect(302, `${back}?provider=gmail&email=${encodeURIComponent(prof.emailAddress)}`);
   return;
 });

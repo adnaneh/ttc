@@ -1,4 +1,4 @@
-import { env } from '../env';
+import { } from 'node:process';
 
 type HanaConn = any;
 let hanaModule: any | null = null;
@@ -19,13 +19,13 @@ export async function withHana<T>(fn: (conn: HanaConn) => Promise<T>): Promise<T
   const hana = await getHanaModule();
   const conn = hana.createConnection();
   const params: Record<string, any> = {
-    serverNode: `${env.HANA_HOST}:${env.HANA_PORT}`,
-    uid: env.HANA_USER,
-    pwd: env.HANA_PASSWORD
+    serverNode: `${process.env.HANA_HOST}:${process.env.HANA_PORT}`,
+    uid: process.env.HANA_USER,
+    pwd: process.env.HANA_PASSWORD
   };
-  if (env.HANA_SSL) {
+  if (String(process.env.HANA_SSL).toLowerCase() === 'true') {
     params.encrypt = 'true';
-    params.sslValidateCertificate = !!env.HANA_SSL_VALIDATE;
+    params.sslValidateCertificate = String(process.env.HANA_SSL_VALIDATE).toLowerCase() === 'true';
   }
   await new Promise<void>((resolve, reject) => conn.connect(params, (err: any) => err ? reject(err) : resolve()));
   try {
@@ -43,7 +43,7 @@ export async function fetchInvoiceByIdentifiers(ident: {
   invoiceDate?: string; // ISO yyyy-mm-dd
   poNumber?: string;
 }) {
-  const VIEW = `${env.HANA_SCHEMA ? `"${env.HANA_SCHEMA}".` : ''}"${env.HANA_INVOICES_VIEW}"`;
+  const VIEW = `${process.env.HANA_SCHEMA ? `"${process.env.HANA_SCHEMA}".` : ''}"${process.env.HANA_INVOICES_VIEW || 'INVOICES'}"`;
   return withHana(async (conn) => {
     const run = (sql: string, params: any[]) =>
       new Promise<any[]>((resolve, reject) => conn.exec(sql, params, (err: any, rows: any[]) => err ? reject(err) : resolve(rows)));
@@ -63,7 +63,7 @@ export async function fetchInvoiceByIdentifiers(ident: {
 
     // Fallback by vendor + amount ± tolerance + date window ± 7 days
     if (ident.vendorId && (ident.amount ?? 0) > 0) {
-      const tol = env.AMOUNT_TOLERANCE ?? 0.01;
+      const tol = process.env.AMOUNT_TOLERANCE ? Number(process.env.AMOUNT_TOLERANCE) : 0.01;
       const minAmt = (ident.amount! - tol);
       const maxAmt = (ident.amount! + tol);
       const date = ident.invoiceDate || null;
@@ -86,7 +86,7 @@ export async function fetchInvoiceByIdentifiers(ident: {
 }
 
 export async function applyInvoiceCorrections(where: { invoiceNo?: string; id?: string }, corrections: Record<string, any>) {
-  const TABLE = `${env.HANA_SCHEMA ? `"${env.HANA_SCHEMA}".` : ''}"${env.HANA_INVOICES_VIEW}"`;
+  const TABLE = `${process.env.HANA_SCHEMA ? `"${process.env.HANA_SCHEMA}".` : ''}"${process.env.HANA_INVOICES_VIEW || 'INVOICES'}"`;
   const keys = Object.keys(corrections);
   if (keys.length === 0) return { updated: 0 };
   const setSql = keys.map(k => `"${k.toUpperCase()}" = ?`).join(', ');

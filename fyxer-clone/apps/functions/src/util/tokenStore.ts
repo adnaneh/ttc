@@ -1,12 +1,15 @@
 import { google } from 'googleapis';
 import { db } from './firestore';
 import { decryptToken, encryptToken } from './kms';
-import { env } from '../env';
 
 // ---------- Gmail ----------
 
 export function gmailOAuthClient() {
-  return new google.auth.OAuth2(env.GMAIL_CLIENT_ID, env.GMAIL_CLIENT_SECRET, env.GMAIL_REDIRECT_URI);
+  return new google.auth.OAuth2(
+    process.env.GMAIL_CLIENT_ID,
+    process.env.GMAIL_CLIENT_SECRET,
+    process.env.GMAIL_REDIRECT_URI
+  );
 }
 
 export async function saveGmailTokens(mailboxRefPath: string, tokens: any) {
@@ -45,25 +48,24 @@ const AUTH_BASE = (tenant: string) => `https://login.microsoftonline.com/${tenan
 
 export function outlookAuthUrl(stateId: string) {
   const params = new URLSearchParams({
-    client_id: env.MS_CLIENT_ID,
+    client_id: process.env.MS_CLIENT_ID!,
     response_type: 'code',
-    redirect_uri: env.MS_REDIRECT_URI,
+    redirect_uri: process.env.MS_REDIRECT_URI!,
     response_mode: 'query',
     scope: 'offline_access Mail.Read Mail.ReadWrite User.Read',
     state: stateId
   });
-  return `${AUTH_BASE(env.MS_TENANT)}/authorize?${params.toString()}`;
+  return `${AUTH_BASE(process.env.MS_TENANT!)}/authorize?${params.toString()}`;
 }
 
 export async function outlookExchangeCode(code: string) {
-  const body = new URLSearchParams({
-    client_id: env.MS_CLIENT_ID,
-    client_secret: env.MS_CLIENT_SECRET,
-    code,
-    redirect_uri: env.MS_REDIRECT_URI,
-    grant_type: 'authorization_code'
-  });
-  const res = await fetch(`${AUTH_BASE(env.MS_TENANT)}/token`, {
+  const body = new URLSearchParams();
+  body.set('client_id', process.env.MS_CLIENT_ID!);
+  if (process.env.MS_CLIENT_SECRET) body.set('client_secret', process.env.MS_CLIENT_SECRET);
+  body.set('code', code);
+  body.set('redirect_uri', process.env.MS_REDIRECT_URI!);
+  body.set('grant_type', 'authorization_code');
+  const res = await fetch(`${AUTH_BASE(process.env.MS_TENANT!)}/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body
@@ -73,14 +75,13 @@ export async function outlookExchangeCode(code: string) {
 }
 
 export async function outlookRefreshToken(refresh_token: string) {
-  const body = new URLSearchParams({
-    client_id: env.MS_CLIENT_ID,
-    client_secret: env.MS_CLIENT_SECRET,
-    refresh_token,
-    redirect_uri: env.MS_REDIRECT_URI,
-    grant_type: 'refresh_token'
-  });
-  const res = await fetch(`${AUTH_BASE(env.MS_TENANT)}/token`, {
+  const body = new URLSearchParams();
+  body.set('client_id', process.env.MS_CLIENT_ID!);
+  if (process.env.MS_CLIENT_SECRET) body.set('client_secret', process.env.MS_CLIENT_SECRET);
+  body.set('refresh_token', refresh_token);
+  body.set('redirect_uri', process.env.MS_REDIRECT_URI!);
+  body.set('grant_type', 'refresh_token');
+  const res = await fetch(`${AUTH_BASE(process.env.MS_TENANT!)}/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body

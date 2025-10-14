@@ -2,7 +2,7 @@ import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { db } from '../util/firestore';
 import { getFreshGraphAccessTokenForMailbox } from '../util/tokenStore';
 import { createSubscription, renewSubscription } from '../connectors/outlook';
-import { env } from '../env';
+import { } from 'node:process';
 import { logger } from '../util/logger';
 
 async function renewForFolder(mailboxDoc: any, folder: 'Inbox'|'SentItems') {
@@ -21,7 +21,7 @@ async function renewForFolder(mailboxDoc: any, folder: 'Inbox'|'SentItems') {
       logger.warn('Renew failed; creating new sub', { mailboxId: mailboxDoc.id, folder, err: String((e as any)?.message || e) });
     }
   }
-  const sub = await createSubscription(token, env.GRAPH_WEBHOOK_URL, newExp, folder);
+  const sub = await createSubscription(token, process.env.GRAPH_WEBHOOK_URL!, newExp, folder);
   await mailboxDoc.ref.update({
     [`sync.${folder === 'Inbox' ? 'inbox' : 'sent'}.subscriptionId`]: sub.id,
     [`sync.${folder === 'Inbox' ? 'inbox' : 'sent'}.watchExpiration`]: Date.parse(sub.expirationDateTime)

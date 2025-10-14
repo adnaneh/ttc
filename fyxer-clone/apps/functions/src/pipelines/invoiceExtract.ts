@@ -1,8 +1,5 @@
 import { PDFParse as pdfParse } from 'pdf-parse';
 import OpenAI from 'openai';
-import { env } from '../env';
-
-const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY });
 
 export type InvoiceFields = {
   invoiceNo?: string;
@@ -57,6 +54,7 @@ export async function extractInvoiceFieldsFromPdf(buf: Buffer): Promise<InvoiceF
 
   // Use LLM to refine (robust to weird layouts)
   try {
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const prompt = `Extract invoice fields as strict JSON with keys:
 { "invoiceNo": string?, "vendorId": string?, "vendorName": string?, "currency": string?, "amount": number?, "invoiceDate": "YYYY-MM-DD"?, "dueDate": "YYYY-MM-DD"?, "poNumber": string? }.
 Use null for unknown. Return ONLY JSON.`;
@@ -85,6 +83,7 @@ Use null for unknown. Return ONLY JSON.`;
   const url = `data:${mimetype};base64,${b64}`;
 
   try {
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const resp = await (openai as any).chat.completions.create({
       model: 'gpt-4o-mini',
       response_format: { type: 'json_object' as const },

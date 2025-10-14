@@ -1,12 +1,10 @@
 import { onRequest } from 'firebase-functions/v2/https';
 import OpenAI from 'openai';
-import { env } from '../env';
 import { db } from '../util/firestore';
 import { queryVectors } from '../util/pinecone';
 
-const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY });
-
 async function embedQuery(q: string): Promise<number[]> {
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const res = await openai.embeddings.create({ model: 'text-embedding-3-small', input: q.slice(0, 7500) });
   return res.data[0].embedding as number[];
 }

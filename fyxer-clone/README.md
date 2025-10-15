@@ -61,3 +61,22 @@
 - Optional automation:
   - Run `apps/functions/scripts/push_env_to_cloud_run.sh --region europe-west1 --project <projectId>` to push values to all function services.
   - Note: If services currently use Secrets, the script tries to replace them with env vars. If it errors, use the Console to remove Secrets and add env vars in a single edit/deploy.
+
+### Admin UI (Mock DB)
+- Set `ADMIN_DASHBOARD_TOKEN` in Functions (Secret recommended) and Vercel (Server Env).
+- Deploy Functions (routes `adminMockInvoices*`) and Web.
+- Visit `/admin/mock-invoices` to browse and edit mock invoices.
+
+### BigQuery + Metabase
+- Ensure Firestore → BigQuery Mirror/Export includes collections: `cases`, `mock_hana_invoices`.
+- Create analytics views in BigQuery (adjust project/dataset):
+  - `cases_latest` selecting needed fields (status, createdAt/appliedAt, vendor_id, invoice_no, incoherences, etc.).
+  - `mock_invoices_latest` mapping `INVOICE_*` fields and timestamps.
+- In Metabase, connect the dataset and add questions:
+  - Drafts by day, Applied by day, Correction rate by vendor, Top incoherent fields, Avg correction lag.
+- Assemble into a dashboard; add time/vendor filters.
+
+### Switching DB backends
+- `DB_BACKEND=mock` → invoice lookups/updates hit Firestore collection `mock_hana_invoices`.
+- `DB_BACKEND=hana` → hits real SAP HANA via `@sap/hana-client`.
+- No code changes in pipelines needed.

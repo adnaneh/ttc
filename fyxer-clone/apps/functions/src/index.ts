@@ -7,10 +7,11 @@ const OPENAI_API_KEY = defineSecret('OPENAI_API_KEY');
 const PINECONE_API_KEY = defineSecret('PINECONE_API_KEY');
 const GMAIL_CLIENT_SECRET = defineSecret('GMAIL_CLIENT_SECRET');
 const MS_CLIENT_SECRET = defineSecret('MS_CLIENT_SECRET');
+const ADMIN_DASHBOARD_TOKEN = defineSecret('ADMIN_DASHBOARD_TOKEN');
 
 setGlobalOptions({
   region: 'europe-west1',
-  secrets: [OPENAI_API_KEY, PINECONE_API_KEY, GMAIL_CLIENT_SECRET, MS_CLIENT_SECRET]
+  secrets: [OPENAI_API_KEY, PINECONE_API_KEY, GMAIL_CLIENT_SECRET, MS_CLIENT_SECRET, ADMIN_DASHBOARD_TOKEN]
 });
 
 // Register path aliases for runtime resolution
@@ -36,6 +37,7 @@ export { search } from './https/search';
 export { gmailPushBridge } from './https/gmailPushBridge';
 export { rewatchGmail } from './https/rewatchGmail';
 export { seedMockFromGcs } from './https/seedMockFromGcs';
+export { adminMockInvoicesList, adminMockInvoicesGet, adminMockInvoicesUpdate } from './https/mockInvoices';
 
 // Webhooks / cron
 export { graphWebhook } from './webhooks/graphWebhook';

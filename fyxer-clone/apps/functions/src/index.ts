@@ -19,11 +19,12 @@ import { addAlias } from 'module-alias';
 import path from 'path';
 import fs from 'fs';
 
-// Support monorepo (repo-root packages/shared/lib) and bundled fallback (lib/_shared)
+// Support bundled local copy first (lib/_shared) for emulator hot reload,
+// then fall back to monorepo path (repo-root packages/shared/lib)
 (() => {
   const candidates = [
-    path.resolve(__dirname, '../../../packages/shared/lib'),
-    path.resolve(__dirname, './_shared')
+    path.resolve(__dirname, './_shared'),
+    path.resolve(__dirname, '../../../packages/shared/lib')
   ];
   for (const p of candidates) {
     if (fs.existsSync(p)) { addAlias('@shared', p); return; }

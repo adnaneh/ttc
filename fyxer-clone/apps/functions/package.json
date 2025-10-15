@@ -10,7 +10,8 @@
     "lint": "echo \"add eslint here\"",
     "expose:ngrok": "npx -y ngrok http 5001",
     "setup:push": "node tools/setup-push.js",
-    "dev:bridge": "concurrently -k -n EMU,NGROK,PUSH \"firebase emulators:start --only functions,firestore,pubsub,storage --config ../../firebase.json\" \"npx -y ngrok http 5001\" \"node tools/setup-push.js --watch\""
+    "watch:shared": "node tools/watch-shared.js",
+    "dev:bridge": "concurrently -k -n TSC_FUN,TSC_SHARED,SYNC_SHARED,EMU,NGROK,PUSH \"npm run dev\" \"npm -w packages/shared run dev\" \"npm run watch:shared\" \"firebase emulators:start --only functions,firestore,pubsub,storage --config ../../firebase.json\" \"npx -y ngrok http 5001\" \"node tools/setup-push.js --watch\""
   },
   "dependencies": {
     "module-alias": "^2.2.3",

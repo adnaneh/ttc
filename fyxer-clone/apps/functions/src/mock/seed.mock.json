@@ -22,6 +22,17 @@
     "DUE_DATE": "2025-10-01",
     "PO_NUMBER": "PO-1000",
     "UPDATED_AT": 1696204800000
+  },
+  {
+    "ID": "inv-netlify-04789023",
+    "INVOICE_NO": "INV04789023",
+    "VENDOR_ID": "NETLIFY",
+    "VENDOR_NAME": "Netlify, Inc.",
+    "CURRENCY": "USD",
+    "AMOUNT": 76.0,
+    "INVOICE_DATE": "2023-11-13",
+    "DUE_DATE": "2023-12-13",
+    "PO_NUMBER": "",
+    "UPDATED_AT": 1700000000000
   }
 ]
-

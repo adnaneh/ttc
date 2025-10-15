@@ -1,0 +1,27 @@
+[
+  {
+    "ID": "inv-1001",
+    "INVOICE_NO": "INV-1001",
+    "VENDOR_ID": "VEND-77",
+    "VENDOR_NAME": "Vendor LLC",
+    "CURRENCY": "USD",
+    "AMOUNT": 1234.56,
+    "INVOICE_DATE": "2025-08-30",
+    "DUE_DATE": "2025-09-29",
+    "PO_NUMBER": "PO-00421",
+    "UPDATED_AT": 1696118400000
+  },
+  {
+    "ID": "inv-1002",
+    "INVOICE_NO": "INV-1002",
+    "VENDOR_ID": "ACME-1",
+    "VENDOR_NAME": "ACME Corp",
+    "CURRENCY": "EUR",
+    "AMOUNT": 890.0,
+    "INVOICE_DATE": "2025-09-01",
+    "DUE_DATE": "2025-10-01",
+    "PO_NUMBER": "PO-1000",
+    "UPDATED_AT": 1696204800000
+  }
+]
+

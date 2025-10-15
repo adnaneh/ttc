@@ -40,6 +40,38 @@
         { "fieldPath": "sync.sent.watchExpiration", "order": "ASCENDING" }
       ]
     }
+    ,
+    /* mock_hana_invoices — vendor + amount window + updated_at */
+    {
+      "collectionGroup": "mock_hana_invoices",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "VENDOR_ID", "order": "ASCENDING" },
+        { "fieldPath": "AMOUNT", "order": "ASCENDING" },
+        { "fieldPath": "UPDATED_AT", "order": "DESCENDING" }
+      ]
+    },
+    /* mock_hana_invoices — vendor + currency + amount + updated_at */
+    {
+      "collectionGroup": "mock_hana_invoices",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "VENDOR_ID", "order": "ASCENDING" },
+        { "fieldPath": "CURRENCY", "order": "ASCENDING" },
+        { "fieldPath": "AMOUNT", "order": "ASCENDING" },
+        { "fieldPath": "UPDATED_AT", "order": "DESCENDING" }
+      ]
+    },
+    /* mock_hana_invoices — po + vendor + updated_at */
+    {
+      "collectionGroup": "mock_hana_invoices",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "PO_NUMBER", "order": "ASCENDING" },
+        { "fieldPath": "VENDOR_ID", "order": "ASCENDING" },
+        { "fieldPath": "UPDATED_AT", "order": "DESCENDING" }
+      ]
+    }
   ],
   "fieldOverrides": []
 }

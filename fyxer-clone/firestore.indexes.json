@@ -71,6 +71,15 @@
         { "fieldPath": "VENDOR_ID", "order": "ASCENDING" },
         { "fieldPath": "UPDATED_AT", "order": "DESCENDING" }
       ]
+    },
+    /* mock_hana_invoices — invoice_no + updated_at */
+    {
+      "collectionGroup": "mock_hana_invoices",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "INVOICE_NO", "order": "ASCENDING" },
+        { "fieldPath": "UPDATED_AT", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

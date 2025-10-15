@@ -17,7 +17,7 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 const functionsDir = path.resolve(__dirname, '..');
 const destDir = path.resolve(functionsDir, 'lib/_shared');
-const srcDir = path.resolve(functionsDir, '../../../packages/shared/lib');
+const srcDir = path.resolve(functionsDir, '../../packages/shared/lib');
 
 async function ensureDir(p) {
   await fsp.mkdir(p, { recursive: true }).catch(() => {});
@@ -87,4 +87,3 @@ async function main() {
 }
 
 main().catch(e => { console.error(e); process.exit(1); });
-

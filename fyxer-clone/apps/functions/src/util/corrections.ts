@@ -8,7 +8,8 @@ export function parseCorrectionsFromText(text: string) {
   const lines = text.split(/\r?\n/).map(s => s.trim());
   const corr: Record<string, any> = {};
   for (const ln of lines) {
-    const m = ln.match(/^\-\s*([a-zA-Z0-9_]+)\s*:\s*(.*?)\s*->\s*(.+)$/);
+    // Be tolerant of mobile clients: allow bullets -, –, —, • and arrows -> or →
+    const m = ln.match(/^[\-–—•]\s*([a-zA-Z0-9_]+)\s*:\s*(.*?)\s*(?:->|→)\s*(.+)$/);
     if (m) {
       const field = m[1];
       let value: string | number = m[3].trim();

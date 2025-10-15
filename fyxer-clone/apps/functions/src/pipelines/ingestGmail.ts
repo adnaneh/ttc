@@ -5,6 +5,14 @@ import { extractHtmlFromPayload } from '../util/gmailBody';
 import { PubSub } from '@google-cloud/pubsub';
 import { downloadAndStoreGmailAttachments } from '../util/gmailAttachments';
 import { logger } from '../util/logger';
+import { parseCorrectionsFromText, applyCorrectionsFromCase } from '../util/corrections';
+
+function stripHtml(s: string) {
+  return s
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<[^>]+>/g, ' ');
+}
 
 const pubsub = new PubSub();
 
@@ -19,7 +27,7 @@ export async function ingestFromGmail(accessToken: string, startHistoryId: strin
 
   for (const msgId of seen) {
     const msg = await getMessage(accessToken, msgId);
-    const { html } = extractHtmlFromPayload(msg.payload as any);
+    const { html, textFallback } = extractHtmlFromPayload(msg.payload as any);
     const ptr = await saveMailBodyPtr(`mail/${mailboxId}/${msg.id}.html`, html || '<!-- empty -->');
 
     const headers = (msg.payload?.headers ?? []) as Array<{ name: string; value: string }>;
@@ -72,6 +80,28 @@ export async function ingestFromGmail(accessToken: string, startHistoryId: strin
 
     // Enqueue embeddings as before
     await pubsub.topic('mail.embed').publishMessage({ json: { mailboxId, messageId: msg.id } });
+
+    // For Sent messages: parse and apply corrections exactly once via history
+    const isSent = labelIds.has('SENT');
+    if (isSent) {
+      const textRaw = (textFallback || html || '') as string;
+      const text = stripHtml(textRaw);
+      const xcase = headers.find(x => x.name.toLowerCase() === 'x-fyxer-case-id')?.value;
+      const { caseId, corrections } = parseCorrectionsFromText(text);
+
+      // Debug print to help diagnose mobile send issues
+      const preview = text.replace(/\s+/g, ' ').slice(0, 400);
+      await db.collection('events').add({ type: 'gmail.corrections.debug', mailboxId, messageId: msg.id, headerCaseId: xcase || '', parsedCaseId: caseId || '', preview, labels: Array.from(labelIds), ts: Date.now() });
+
+      if (caseId && Object.keys(corrections).length) {
+        try {
+          await applyCorrectionsFromCase(caseId, corrections);
+          await db.collection('events').add({ type: 'gmail.corrections.applied', caseId, messageId: msg.id, mailboxId, ts: Date.now() });
+        } catch (e: any) {
+          await db.collection('events').add({ type: 'gmail.corrections.error', caseId, messageId: msg.id, mailboxId, error: String(e?.message || e), ts: Date.now() });
+        }
+      }
+    }
   }
 
   await db.collection('events').add({ type: 'gmail.ingest.complete', mailboxId, count: seen.size, ts: Date.now() });

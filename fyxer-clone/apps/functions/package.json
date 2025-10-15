@@ -7,11 +7,12 @@
     "prebuild": "node -e \"require('fs').rmSync('lib', { recursive: true, force: true })\"",
     "build": "tsc -p tsconfig.json",
     "dev": "npm run build -- --watch",
+    "seed:mock": "node tools/seed-on-start.js",
     "lint": "echo \"add eslint here\"",
     "expose:ngrok": "npx -y ngrok http 5001",
     "setup:push": "node tools/setup-push.js",
     "watch:shared": "node tools/watch-shared.js",
-    "dev:bridge": "concurrently -k -n TSC_FUN,TSC_SHARED,SYNC_SHARED,EMU,NGROK,PUSH \"npm run dev\" \"npm -w @fyxer/shared run dev\" \"npm run watch:shared\" \"firebase emulators:start --config ../../firebase.json\" \"npx -y ngrok http 5001\" \"node tools/setup-push.js --watch\""
+    "dev:bridge": "concurrently --kill-others-on-fail -n TSC_FUN,TSC_SHARED,SYNC_SHARED,EMU,NGROK,PUSH,SEED \"npm run dev\" \"npm -w @fyxer/shared run dev\" \"npm run watch:shared\" \"firebase emulators:start --config ../../firebase.json\" \"npx -y ngrok http 5001\" \"node tools/setup-push.js --watch\" \"node tools/seed-on-start.js\""
   },
   "dependencies": {
     "module-alias": "^2.2.3",

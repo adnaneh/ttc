@@ -93,6 +93,19 @@ export async function ingestOutlookFolderChanges(accessToken: string, mailboxId:
             });
           }
         }
+
+        // Inbox: enqueue for quote processing (qualifies inside the processor)
+        await pubsub.topic('quote.process').publishMessage({
+          json: {
+            provider: 'outlook',
+            mailboxId,
+            threadId: msg.conversationId,
+            messageId: id,
+            from,
+            subject,
+            bodyPtr: ptr
+          }
+        });
       }
 
       // SentItems: parse corrections and apply to SAP HANA if present

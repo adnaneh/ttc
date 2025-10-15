@@ -43,3 +43,30 @@ export async function createGmailDraftReply(params: {
   return res.data;
 }
 
+export async function createGmailDraftSimpleReply(params: {
+  accessToken: string;
+  threadId: string;
+  to: string;
+  subject: string;
+  htmlBody: string;
+}) {
+  const gmail = gmailClientFromAccessToken(params.accessToken);
+  const plain = params.htmlBody
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const raw = composeAltMime(
+    { To: params.to, Subject: params.subject },
+    plain || 'See HTML version.',
+    params.htmlBody
+  );
+
+  const res = await gmail.users.drafts.create({
+    userId: 'me',
+    requestBody: { message: { threadId: params.threadId, raw: b64url(raw) } }
+  });
+  return res.data;
+}

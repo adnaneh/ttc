@@ -52,3 +52,4 @@ export { mailNormalize } from './triggers/mailNormalize';
 export { mailEmbed } from './triggers/mailEmbed';
 export { mailIndex } from './triggers/mailIndex';
 export { invoiceProcess } from './triggers/invoiceProcess';
+export { quoteProcess } from './triggers/quoteProcess';

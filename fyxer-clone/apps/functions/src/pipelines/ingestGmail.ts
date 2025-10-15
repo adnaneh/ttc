@@ -34,6 +34,7 @@ export async function ingestFromGmail(accessToken: string, startHistoryId: strin
     const hget = (n: string) => headers.find(x => x.name.toLowerCase() === n.toLowerCase())?.value || '';
     const toList = hget('To') ? hget('To').split(',').map(s => s.trim()) : [];
     const labelIds = new Set((msg.labelIds || []) as string[]);
+    const isSent = labelIds.has('SENT');
 
     await db.collection('messages').doc(msg.id!).set({
       threadRef: msg.threadId,
@@ -43,7 +44,7 @@ export async function ingestFromGmail(accessToken: string, startHistoryId: strin
       snippet: msg.snippet ?? '',
       bodyPtr: ptr,
       sentAt: Number(msg.internalDate ?? Date.now()),
-      isInbound: !labelIds.has('SENT'),
+      isInbound: !isSent,
       createdAt: Date.now(),
       labelIds: Array.from(labelIds)
     }, { merge: true });
@@ -78,11 +79,27 @@ export async function ingestFromGmail(accessToken: string, startHistoryId: strin
       }
     }
 
+    // Publish quote.process for Inbox messages (processor will decide intent & contact eligibility)
+    if (!isSent && msg.threadId) {
+      const fromRaw = hget('From');
+      const fromEmail = (fromRaw.match(/<([^>]+)>/)?.[1] || fromRaw).trim();
+      await pubsub.topic('quote.process').publishMessage({
+        json: {
+          provider: 'gmail',
+          mailboxId,
+          threadId: msg.threadId,
+          messageId: msg.id,
+          from: fromEmail,
+          subject: hget('Subject'),
+          bodyPtr: ptr
+        }
+      });
+    }
+
     // Enqueue embeddings as before
     await pubsub.topic('mail.embed').publishMessage({ json: { mailboxId, messageId: msg.id } });
 
     // For Sent messages: parse and apply corrections exactly once via history
-    const isSent = labelIds.has('SENT');
     if (isSent) {
       const textRaw = (textFallback || html || '') as string;
       const text = stripHtml(textRaw);

@@ -15,6 +15,7 @@
     "dev:bridge": "concurrently --kill-others-on-fail -n TSC_FUN,TSC_SHARED,SYNC_SHARED,EMU,NGROK,PUSH,SEED \"npm run dev\" \"npm -w @fyxer/shared run dev\" \"npm run watch:shared\" \"firebase emulators:start --config ../../firebase.json\" \"npx -y ngrok http 5001\" \"node tools/setup-push.js --watch\" \"node tools/seed-on-start.js\""
   },
   "dependencies": {
+    "xlsx": "^0.18.5",
     "module-alias": "^2.2.3",
     "@google-cloud/kms": "^5.2.1",
     "@google-cloud/pubsub": "^5.2.0",

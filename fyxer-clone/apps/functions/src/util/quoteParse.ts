@@ -1,3 +1,5 @@
+import { llmExtractShipment } from './llm';
+
 export type ShipmentIntent = {
   isQuoteRequest: boolean;
   customerName?: string;
@@ -21,7 +23,7 @@ export function detectIntent(text: string, keywords: string[]): ShipmentIntent {
   return { isQuoteRequest: isQuote };
 }
 
-export function parseShipment(text: string): ShipmentSpec {
+export function parseShipmentRegex(text: string): ShipmentSpec {
   const t = text.replace(/\r/g, ' ').replace(/\s+/g, ' ').trim();
 
   // 1×40 HC CNSHA → DEHAM, CY/CY
@@ -66,3 +68,24 @@ export function parseShipment(text: string): ShipmentSpec {
   };
 }
 
+function normalize(spec: ShipmentSpec): ShipmentSpec {
+  const up = (s?: string) => s ? s.toUpperCase() : undefined;
+  const eq = spec.equipment?.replace(/\s+/g,'').replace('HQ','HC');
+  return { ...spec, equipment: eq, pol: up(spec.pol), pod: up(spec.pod), service: up(spec.service) };
+}
+
+export async function parseShipmentSmart(opts: { orgId: string; text: string; llmEnabled: boolean }): Promise<ShipmentSpec> {
+  const regex = normalize(parseShipmentRegex(opts.text));
+  const needsLLM = !regex.pol || !regex.pod || !regex.equipment || opts.llmEnabled;
+  if (!needsLLM) return regex;
+  const llm = await llmExtractShipment(opts.text);
+  const merged: ShipmentSpec = {
+    qty: regex.qty ?? llm.qty,
+    equipment: regex.equipment ?? llm.equipment,
+    pol: regex.pol ?? llm.pol,
+    pod: regex.pod ?? llm.pod,
+    service: regex.service ?? llm.service,
+    etd: regex.etd ?? llm.etd
+  };
+  return normalize(merged);
+}

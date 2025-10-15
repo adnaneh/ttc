@@ -2,12 +2,13 @@ import { onMessagePublished } from 'firebase-functions/v2/pubsub';
 import { logger } from '../util/logger';
 import { db } from '../util/firestore';
 import { readByPtr } from '../util/storage';
-import { detectIntent, parseShipment } from '../util/quoteParse';
+import { detectIntent, parseShipmentSmart } from '../util/quoteParse';
 import { compileQuotes } from '../util/quoteSources';
-import { renderQuoteHtml } from '../util/quoteEmail';
+import { renderQuoteHtml, numberQuoteOptions } from '../util/quoteEmail';
 import { getFreshGraphAccessTokenForMailbox, getFreshAccessTokenForMailbox } from '../util/tokenStore';
 import { createOutlookDraftReply } from '../util/outlookDraft';
 import { createGmailDraftSimpleReply } from '../util/gmailDraft';
+import { orgFeature } from '../util/orgFeatures';
 
 function strip(html: string) {
   return html
@@ -52,15 +53,21 @@ export const quoteProcess = onMessagePublished(
       const intent = detectIntent(text, getKeywords());
       if (!intent.isQuoteRequest) { logger.info('quote: not a quote request', { provider }); return; }
 
-      // 3) Parse shipment spec
-      const spec = parseShipment(text);
+      // 3) Parse shipment spec (regex + optional LLM)
+      const llmEnabled = await orgFeature(orgId, 'llmParseQuotes', false);
+      const spec = await parseShipmentSmart({ orgId, text, llmEnabled });
       if (!spec.pol || !spec.pod || !spec.equipment) {
         logger.info('quote: missing essential fields', { spec, provider });
         return;
       }
 
-      // 4) Compile rates
-      const quotes = await compileQuotes({ pol: spec.pol, pod: spec.pod, equipment: spec.equipment });
+      // 4) Compile rates and number options
+      const baseQuotes = await compileQuotes({ pol: spec.pol, pod: spec.pod, equipment: spec.equipment });
+      const quotes = numberQuoteOptions(baseQuotes);
+
+      // Create a quote document now to get a stable id (used in Gmail header)
+      const quoteRef = db.collection('quotes').doc();
+      const quoteId = quoteRef.id;
 
       // 5) Render draft and create provider-specific reply draft
       const html = renderQuoteHtml({ customerName, spec, quotes, validDays: getValidDays() });
@@ -80,18 +87,20 @@ export const quoteProcess = onMessagePublished(
           threadId,
           to: from,
           subject: `Re: ${subject || 'Your freight quote'}`,
-          htmlBody: html
+          htmlBody: html,
+          extraHeaders: { 'X-Fyxer-Quote-Id': quoteId }
         });
       }
 
       // 6) Persist a quote case document
-      await db.collection('quotes').add({
+      await quoteRef.set({
+        status: 'drafted',
         provider, mailboxId, threadId, messageId,
         customer: { name: customerName, email: from },
-        spec, quotes, createdAt: Date.now()
+        spec, options: quotes, createdAt: Date.now()
       });
 
-      logger.info('quote: draft created', { provider, mailboxId, messageId });
+      logger.info('quote: draft created', { provider, mailboxId, messageId, quoteId });
     } catch (e: any) {
       logger.error('quote: failed', { provider, err: String(e?.message || e) });
     }

@@ -1,5 +1,6 @@
 import { loadDealsFromXlsx, DealRow } from './xlsxRates';
 import { maerskQuerySpotRates } from './maersk';
+import { mscQueryRates } from './msc';
 
 export type QuoteItem = {
   source: 'excel' | 'maersk' | 'msc';
@@ -47,14 +48,19 @@ export async function queryMaerskSpot(q: { pol: string; pod: string; equipment: 
 
 // 3) MSC Instant/Contract Rates (only if API key present). Placeholder
 export async function queryMSC(q: { pol: string; pod: string; equipment: string }): Promise<QuoteItem[]> {
-  if (!process.env.MSC_API_KEY) return [];
-  const data: any[] = [];
-  return data.map(d => ({
-    source: 'msc' as const, carrier: 'MSC',
-    equipment: q.equipment, pol: q.pol, pod: q.pod,
-    price: Number(d.total), currency: d.currency || 'USD',
-    transitDays: d.tt, freeTimeDays: d.free, validityTo: d.validTo
-  }));
+  try {
+    const offers = await mscQueryRates(q);
+    return offers.map((d: any) => ({
+      source: 'msc' as const, carrier: 'MSC',
+      equipment: q.equipment, pol: q.pol, pod: q.pod,
+      price: Number(d?.total ?? d?.price ?? 0), currency: (d?.currency || 'USD').toUpperCase(),
+      transitDays: Number(d?.tt ?? d?.transitDays ?? 0) || undefined,
+      freeTimeDays: Number(d?.free ?? 0) || undefined,
+      validityTo: d?.validTo
+    })).filter(x => Number.isFinite(x.price) && x.price > 0);
+  } catch {
+    return [];
+  }
 }
 
 export async function compileQuotes(q: { pol: string; pod: string; equipment: string }) {

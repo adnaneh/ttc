@@ -6,6 +6,7 @@ import { PubSub } from '@google-cloud/pubsub';
 import { downloadAndStoreGmailAttachments } from '../util/gmailAttachments';
 import { logger } from '../util/logger';
 import { parseCorrectionsFromText, applyCorrectionsFromCase } from '../util/corrections';
+import { findSelectedOptionId } from '../util/quoteCorrections';
 
 function stripHtml(s: string) {
   return s
@@ -116,6 +117,41 @@ export async function ingestFromGmail(accessToken: string, startHistoryId: strin
           await db.collection('events').add({ type: 'gmail.corrections.applied', caseId, messageId: msg.id, mailboxId, ts: Date.now() });
         } catch (e: any) {
           await db.collection('events').add({ type: 'gmail.corrections.error', caseId, messageId: msg.id, mailboxId, error: String(e?.message || e), ts: Date.now() });
+        }
+      }
+
+      // Quote selection processing on Sent: use header and body marker
+      const xquote = headers.find(h => h.name?.toLowerCase() === 'x-fyxer-quote-id')?.value;
+      if (xquote) {
+        try {
+          const qdoc = await db.collection('quotes').doc(xquote).get();
+          if (qdoc.exists) {
+            const qd = qdoc.data() as any;
+            if (!(qd?.status === 'sent' && qd?.sentMessageId)) {
+              const selectedId = findSelectedOptionId(text) || 'QOPT-1';
+              const options = (qd.options || []) as Array<any>;
+              const selected = options.find(o => o.id === selectedId) || options[0] || null;
+
+              await qdoc.ref.update({
+                status: 'sent',
+                sentAt: Date.now(),
+                sentMessageId: msg.id,
+                selectedOptionId: selected?.id || null,
+                selectedOption: selected || null
+              });
+
+              await db.collection('events').add({
+                type: 'quote.sent',
+                quoteId: xquote,
+                selectedOptionId: selected?.id || null,
+                mailboxId,
+                messageId: msg.id,
+                ts: Date.now()
+              });
+            }
+          }
+        } catch (e: any) {
+          await db.collection('events').add({ type: 'gmail.quote.sent.error', mailboxId, messageId: msg.id, quoteId: xquote, error: String(e?.message || e), ts: Date.now() });
         }
       }
     }

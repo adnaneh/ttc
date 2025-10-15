@@ -2,12 +2,13 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
 type Props = {
-  searchParams?: { provider?: string; email?: string };
+  searchParams?: Promise<{ provider?: string; email?: string }>;
 };
 
-export default function ConnectSuccessPage({ searchParams }: Props) {
-  const provider = (searchParams?.provider || 'account').toLowerCase();
-  const email = searchParams?.email;
+export default async function ConnectSuccessPage({ searchParams }: Props) {
+  const sp = await searchParams;
+  const provider = (sp?.provider || 'account').toLowerCase();
+  const email = sp?.email;
   const prettyProvider = provider === 'gmail'
     ? 'Gmail'
     : provider === 'outlook'
@@ -32,4 +33,3 @@ export default function ConnectSuccessPage({ searchParams }: Props) {
     </main>
   );
 }
-

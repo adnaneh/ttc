@@ -39,13 +39,10 @@ export const quoteProcess = onMessagePublished(
     if (!provider || !mailboxId || !threadId || !messageId || !from || !bodyPtr) return;
 
     try {
-      // 1) Check contact list: only auto-quote if sender is configured contact
+      // 1) Load org for features; quote flow is not restricted to a contacts list
       const mailboxSnap = await db.collection('mailboxes').doc(mailboxId).get();
       const orgId = (mailboxSnap.data() as any)?.orgId || 'default';
-      const contacts = await db.collection('orgs').doc(orgId).collection('contacts')
-        .where('autoQuote', '==', true).where('email', '==', from).limit(1).get();
-      if (contacts.empty) { logger.info('quote: sender not in autoQuote contacts', { from, provider }); return; }
-      const customerName = (contacts.docs[0].data() as any).name || fallbackNameFromEmail(from);
+      const customerName = fallbackNameFromEmail(from);
 
       // 2) Read text and detect intent
       const htmlBuf = await readByPtr(bodyPtr);

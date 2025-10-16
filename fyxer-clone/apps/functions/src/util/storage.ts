@@ -1,5 +1,8 @@
 import { Storage } from '@google-cloud/storage';
 import type { Readable } from 'node:stream';
+import * as fs from 'fs';
+import * as fsp from 'fs/promises';
+import * as path from 'path';
 
 function getMailBucket() {
   const name = String(process.env.GCS_BUCKET_MAIL || '');
@@ -54,42 +57,54 @@ export async function saveToGCSStream(path: string, readable: Readable, contentT
 }
 
 export async function readByPtr(ptr: string): Promise<Buffer> {
-  // ptr format: gs://bucket/path/to/file
-  if (!ptr.startsWith('gs://')) throw new Error(`Invalid GCS pointer: ${ptr}`);
-  const prefix = `gs://${process.env.GCS_BUCKET_MAIL}/`;
-  if (!ptr.startsWith(prefix)) {
-    throw new Error(`Unexpected bucket in ptr: ${ptr}`);
+  if (!ptr) throw new Error('Invalid pointer');
+  if (ptr.startsWith('gs://')) {
+    const parts = ptr.replace('gs://', '').split('/');
+    const bucket = parts.shift()!;
+    const p = parts.join('/');
+    const storage = new Storage();
+    const file = storage.bucket(bucket).file(p);
+    const [buf] = await file.download();
+    return buf;
   }
-  const rest = ptr.slice(prefix.length);
-  const file = getMailBucket().file(rest);
-  const [buf] = await file.download();
-  return buf;
+  if (ptr.startsWith('file://')) {
+    return await fsp.readFile(new URL(ptr));
+  }
+  // treat as local path (absolute or relative)
+  const abs = path.isAbsolute(ptr) ? ptr : path.resolve(process.cwd(), ptr);
+  return await fsp.readFile(abs);
 }
 
 // Read only the first N bytes from a GCS object referenced by ptr.
 // Useful to avoid loading very large blobs when only a preview is needed.
 export async function readPartialByPtr(ptr: string, maxBytes: number): Promise<Buffer> {
   if (maxBytes <= 0) return Buffer.alloc(0);
-  if (!ptr.startsWith('gs://')) throw new Error(`Invalid GCS pointer: ${ptr}`);
-  const prefix = `gs://${process.env.GCS_BUCKET_MAIL}/`;
-  if (!ptr.startsWith(prefix)) {
-    throw new Error(`Unexpected bucket in ptr: ${ptr}`);
+  if (ptr.startsWith('gs://')) {
+    const parts = ptr.replace('gs://', '').split('/');
+    const bucket = parts.shift()!;
+    const p = parts.join('/');
+    const storage = new Storage();
+    const file = storage.bucket(bucket).file(p);
+    const [buf] = await file.download({ start: 0, end: Math.max(0, maxBytes - 1) });
+    return buf;
   }
-  const rest = ptr.slice(prefix.length);
-  const file = getMailBucket().file(rest);
-  // Range is inclusive; request [0, maxBytes-1]
-  const [buf] = await file.download({ start: 0, end: Math.max(0, maxBytes - 1) });
-  return buf;
+  const full = await readByPtr(ptr);
+  return full.subarray(0, Math.min(full.length, maxBytes));
 }
 
 // Create a read stream for a GCS object by gs:// pointer.
 export function streamByPtr(ptr: string) {
-  if (!ptr.startsWith('gs://')) throw new Error(`Invalid GCS pointer: ${ptr}`);
-  const prefix = `gs://${process.env.GCS_BUCKET_MAIL}/`;
-  if (!ptr.startsWith(prefix)) {
-    throw new Error(`Unexpected bucket in ptr: ${ptr}`);
+  if (ptr.startsWith('gs://')) {
+    const parts = ptr.replace('gs://', '').split('/');
+    const bucket = parts.shift()!;
+    const p = parts.join('/');
+    const storage = new Storage();
+    const file = storage.bucket(bucket).file(p);
+    return file.createReadStream({ validation: false });
   }
-  const rest = ptr.slice(prefix.length);
-  const file = getMailBucket().file(rest);
-  return file.createReadStream({ validation: false });
+  if (ptr.startsWith('file://')) {
+    return fs.createReadStream(new URL(ptr));
+  }
+  const abs = path.isAbsolute(ptr) ? ptr : path.resolve(process.cwd(), ptr);
+  return fs.createReadStream(abs);
 }

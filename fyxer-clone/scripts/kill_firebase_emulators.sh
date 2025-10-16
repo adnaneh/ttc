@@ -78,6 +78,8 @@ kill_port() {
 
 # --- Main ------------------------------------------------------------------
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
+# Allow callers to tweak how long we wait for ports to fully close
+WAIT_SECS="${WAIT_SECS:-5}"
 
 if ! HUB="$(find_hub)"; then
   log "Could not find the Emulator Hub (/emulators). Nothing to do."
@@ -117,3 +119,71 @@ for sig in TERM KILL; do
 done
 
 log "Done. Active listeners (if any) reported by Hub were: ${ports[*]}"
+
+# --- Post-wait: ensure hub/ports have really gone away to avoid race on restart ----
+if [[ -z "$DRY_RUN" ]]; then
+  log "Waiting (up to ${WAIT_SECS}s) for emulator ports to fully close..."
+  end=$((SECONDS + WAIT_SECS))
+  while (( SECONDS < end )); do
+    any_listening=false
+    # If we still have the hub host:port, prefer checking it directly too
+    if [[ -n "${HUB:-}" ]]; then
+      if curl -fsS --max-time 0.25 --connect-timeout 0.1 "http://${HUB}/emulators" >/dev/null 2>&1; then
+        any_listening=true
+      fi
+    fi
+    if [[ $any_listening == false ]]; then
+      for p in "${ports[@]}"; do
+        if lsof -tiTCP:"$p" -sTCP:LISTEN >/dev/null 2>&1; then
+          any_listening=true
+          break
+        fi
+      done
+    fi
+    if [[ $any_listening == false ]]; then
+      log "All reported emulator ports are closed."
+      break
+    fi
+    sleep 0.2
+  done
+fi
+
+# --- Clean up Hub locator file to prevent false "multiple instances" warning ---
+# Firebase CLI writes a locator JSON to os.tmpdir(): hub-<projectId>.json. If the
+# process is killed forcefully, that file can linger and trigger the warning on next start.
+cleanup_locator() {
+  local project_id="$1"; [[ -z "$project_id" ]] && return 0
+  local deleted=0
+  for td in "${TMPDIR:-/tmp}" "/tmp"; do
+    local f="${td%/}/hub-${project_id}.json"
+    if [[ -f "$f" ]]; then
+      if [[ -n "$DRY_RUN" ]]; then
+        log "Would remove hub locator: $f"
+      else
+        rm -f -- "$f" && { log "Removed hub locator: $f"; deleted=1; }
+      fi
+    fi
+  done
+  return $deleted
+}
+
+detect_project_id() {
+  # Priority: explicit envs -> .firebaserc default
+  if [[ -n "${FIREBASE_PROJECT:-}" ]]; then echo "$FIREBASE_PROJECT"; return; fi
+  if [[ -n "${GOOGLE_CLOUD_PROJECT:-}" ]]; then echo "$GOOGLE_CLOUD_PROJECT"; return; fi
+  if [[ -n "${GCLOUD_PROJECT:-}" ]]; then echo "$GCLOUD_PROJECT"; return; fi
+  if [[ -f .firebaserc ]]; then
+    # naive extraction of default project
+    local pid
+    pid="$(grep -oE '"default"\s*:\s*"[^"]+"' -m1 .firebaserc | sed -E 's/.*"default"\s*:\s*"([^"]+)".*/\1/')"
+    [[ -n "$pid" ]] && { echo "$pid"; return; }
+  fi
+  echo ""
+}
+
+PROJECT_ID="$(detect_project_id)"
+if [[ -n "$PROJECT_ID" ]]; then
+  cleanup_locator "$PROJECT_ID" || true
+else
+  log "Project id not detected; skipping hub locator cleanup."
+fi

@@ -1,0 +1,11 @@
+offers:
+  - total: 1440
+    currency: USD
+    tt: 29
+    free: 7
+    validTo: 2025-12-28
+  - total: 1580
+    currency: USD
+    tt: 26
+    free: 5
+    validTo: 2025-12-21

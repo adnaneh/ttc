@@ -36,6 +36,7 @@ export async function ingestFromGmail(accessToken: string, startHistoryId: strin
     const toList = hget('To') ? hget('To').split(',').map(s => s.trim()) : [];
     const labelIds = new Set((msg.labelIds || []) as string[]);
     const isSent = labelIds.has('SENT');
+    const isDraft = labelIds.has('DRAFT');
 
     await db.collection('messages').doc(msg.id!).set({
       threadRef: msg.threadId,
@@ -80,8 +81,8 @@ export async function ingestFromGmail(accessToken: string, startHistoryId: strin
       }
     }
 
-    // Publish quote.process for Inbox messages (processor will decide intent & contact eligibility)
-    if (!isSent && msg.threadId) {
+    // Publish quote.process only for inbound, non-draft messages
+    if (!isSent && !isDraft && msg.threadId) {
       const fromRaw = hget('From');
       const fromEmail = (fromRaw.match(/<([^>]+)>/)?.[1] || fromRaw).trim();
       await pubsub.topic('quote.process').publishMessage({
@@ -97,8 +98,10 @@ export async function ingestFromGmail(accessToken: string, startHistoryId: strin
       });
     }
 
-    // Enqueue embeddings as before
-    await pubsub.topic('mail.embed').publishMessage({ json: { mailboxId, messageId: msg.id } });
+    // Enqueue embeddings (skip drafts to reduce load/loops)
+    if (!isDraft) {
+      await pubsub.topic('mail.embed').publishMessage({ json: { mailboxId, messageId: msg.id } });
+    }
 
     // For Sent messages: parse and apply corrections exactly once via history
     if (isSent) {

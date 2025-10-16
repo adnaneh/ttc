@@ -1,5 +1,5 @@
-import { Storage } from '@google-cloud/storage';
 import * as XLSX from 'xlsx';
+import { readByPtr } from './storage';
 
 export type DealRow = {
   pol: string; pod: string; equipment: string;
@@ -18,12 +18,7 @@ function parseNum(x: any) {
 export async function loadDealsFromXlsx(): Promise<DealRow[]> {
   const ptr = process.env.RATES_XLSX_PTR;
   if (!ptr) return [];
-  if (!ptr.startsWith('gs://')) throw new Error(`RATES_XLSX_PTR must be gs://... (got ${ptr})`);
-  const parts = ptr.replace('gs://', '').split('/');
-  const bucket = parts.shift()!;
-  const path = parts.join('/');
-  const storage = new Storage();
-  const [buf] = await storage.bucket(bucket).file(path).download();
+  const buf = await readByPtr(ptr);
   const wb = XLSX.read(buf, { type: 'buffer' });
   const sh = wb.Sheets[wb.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json<any>(sh, { defval: '' });
@@ -41,4 +36,3 @@ export async function loadDealsFromXlsx(): Promise<DealRow[]> {
     notes: r.notes || r.Notes || ''
   }));
 }
-

@@ -1,0 +1,6 @@
+{
+  "offers": [
+    { "totalPrice": 1425, "currency": "USD", "transitDays": 28, "freeTime": 5, "validTo": "2025-12-31" },
+    { "totalPrice": 1510, "currency": "USD", "transitDays": 27, "freeTime": 7, "validTo": "2025-12-24" }
+  ]
+}

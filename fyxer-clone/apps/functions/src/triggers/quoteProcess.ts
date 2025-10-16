@@ -39,6 +39,10 @@ export const quoteProcess = onMessagePublished(
     if (!provider || !mailboxId || !threadId || !messageId || !from || !bodyPtr) return;
 
     try {
+      // Idempotency: skip if we've already created a quote for this message
+      const dup = await db.collection('quotes').where('messageId', '==', messageId).limit(1).get();
+      if (!dup.empty) { logger.info('quote: already processed, skipping', { provider, mailboxId, messageId }); return; }
+
       // 1) Load org for features; quote flow is not restricted to a contacts list
       const mailboxSnap = await db.collection('mailboxes').doc(mailboxId).get();
       const orgId = (mailboxSnap.data() as any)?.orgId || 'default';
@@ -62,12 +66,14 @@ export const quoteProcess = onMessagePublished(
       const baseQuotes = await compileQuotes({ pol: spec.pol, pod: spec.pod, equipment: spec.equipment });
       const quotes = numberQuoteOptions(baseQuotes);
 
-      // Create a quote document now to get a stable id (used in Gmail header)
+      // Create a new quote document with a stable id; embed this id into the draft body as a marker
       const quoteRef = db.collection('quotes').doc();
       const quoteId = quoteRef.id;
 
       // 5) Render draft and create provider-specific reply draft
       const html = renderQuoteHtml({ customerName, spec, quotes, validDays: getValidDays() });
+      const marker = `<div data-fyxer-quote-id="${quoteId}" style="display:none;color:transparent;font-size:1px">FYXER-QUOTE-ID:${quoteId}</div>`;
+      const htmlWithMarker = html + marker;
       if (provider === 'outlook') {
         const token = await getFreshGraphAccessTokenForMailbox(db.collection('mailboxes').doc(mailboxId).path);
         await createOutlookDraftReply({
@@ -75,7 +81,7 @@ export const quoteProcess = onMessagePublished(
           replyToMessageId: messageId,
           to: from,
           subject: `Re: ${subject || 'Your freight quote'}`,
-          htmlBody: html
+          htmlBody: htmlWithMarker
         });
       } else if (provider === 'gmail') {
         const token = await getFreshAccessTokenForMailbox(db.collection('mailboxes').doc(mailboxId).path);
@@ -84,8 +90,7 @@ export const quoteProcess = onMessagePublished(
           threadId,
           to: from,
           subject: `Re: ${subject || 'Your freight quote'}`,
-          htmlBody: html,
-          extraHeaders: { 'X-Fyxer-Quote-Id': quoteId }
+          htmlBody: htmlWithMarker
         });
       }
 

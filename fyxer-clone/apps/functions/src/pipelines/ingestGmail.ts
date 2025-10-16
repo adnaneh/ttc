@@ -123,39 +123,41 @@ export async function ingestFromGmail(accessToken: string, startHistoryId: strin
         }
       }
 
-      // Quote selection processing on Sent: use header and body marker
-      const xquote = headers.find(h => h.name?.toLowerCase() === 'x-fyxer-quote-id')?.value;
-      if (xquote) {
-        try {
-          const qdoc = await db.collection('quotes').doc(xquote).get();
-          if (qdoc.exists) {
-            const qd = qdoc.data() as any;
+      // Quote selection on Sent: update only if the quote marker is present in the body
+      console.log('Checking for quote marker in sent message', msg.id);
+      logger.info('Checking for quote marker in sent message', { msgId: msg.id });
+      const markerId = text.match(/FYXER-QUOTE-ID:([A-Za-z0-9_-]+)/i)?.[1] || '';
+      const selectedIdFromText = findSelectedOptionId(text) || 'QOPT-1';
+      try {
+        if (markerId) {
+          const targetRef = db.collection('quotes').doc(markerId);
+          const snap = await targetRef.get();
+          if (snap.exists) {
+            const qd = snap.data() as any;
             if (!(qd?.status === 'sent' && qd?.sentMessageId)) {
-              const selectedId = findSelectedOptionId(text) || 'QOPT-1';
               const options = (qd.options || []) as Array<any>;
-              const selected = options.find(o => o.id === selectedId) || options[0] || null;
-
-              await qdoc.ref.update({
+              const chosen = options.find((o: any) => o.id === selectedIdFromText) || options[0] || null;
+              await targetRef.update({
                 status: 'sent',
                 sentAt: Date.now(),
                 sentMessageId: msg.id,
-                selectedOptionId: selected?.id || null,
-                selectedOption: selected || null
+                selectedOptionId: chosen?.id || null,
+                selectedOption: chosen || null
               });
-
               await db.collection('events').add({
                 type: 'quote.sent',
-                quoteId: xquote,
-                selectedOptionId: selected?.id || null,
+                quoteId: targetRef.id,
+                selectedOptionId: chosen?.id || null,
                 mailboxId,
                 messageId: msg.id,
-                ts: Date.now()
+                ts: Date.now(),
+                via: 'marker'
               });
             }
           }
-        } catch (e: any) {
-          await db.collection('events').add({ type: 'gmail.quote.sent.error', mailboxId, messageId: msg.id, quoteId: xquote, error: String(e?.message || e), ts: Date.now() });
         }
+      } catch (e: any) {
+        await db.collection('events').add({ type: 'gmail.quote.sent.error', mailboxId, messageId: msg.id, quoteId: markerId || null, error: String(e?.message || e), ts: Date.now() });
       }
     }
   }

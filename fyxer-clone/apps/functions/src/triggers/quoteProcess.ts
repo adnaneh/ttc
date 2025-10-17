@@ -72,8 +72,6 @@ export const quoteProcess = onMessagePublished(
 
       // 5) Render draft and create provider-specific reply draft
       const html = renderQuoteHtml({ customerName, spec, quotes, validDays: getValidDays() });
-      const marker = `<div data-fyxer-quote-id="${quoteId}" style="display:none;color:transparent;font-size:1px">FYXER-QUOTE-ID:${quoteId}</div>`;
-      const htmlWithMarker = html + marker;
       if (provider === 'outlook') {
         const token = await getFreshGraphAccessTokenForMailbox(db.collection('mailboxes').doc(mailboxId).path);
         await createOutlookDraftReply({
@@ -81,7 +79,7 @@ export const quoteProcess = onMessagePublished(
           replyToMessageId: messageId,
           to: from,
           subject: `Re: ${subject || 'Your freight quote'}`,
-          htmlBody: htmlWithMarker
+          htmlBody: html
         });
       } else if (provider === 'gmail') {
         const token = await getFreshAccessTokenForMailbox(db.collection('mailboxes').doc(mailboxId).path);
@@ -90,7 +88,7 @@ export const quoteProcess = onMessagePublished(
           threadId,
           to: from,
           subject: `Re: ${subject || 'Your freight quote'}`,
-          htmlBody: htmlWithMarker
+          htmlBody: html
         });
       }
 

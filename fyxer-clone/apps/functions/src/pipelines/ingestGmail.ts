@@ -6,7 +6,6 @@ import { PubSub } from '@google-cloud/pubsub';
 import { downloadAndStoreGmailAttachments } from '../util/gmailAttachments';
 import { logger } from '../util/logger';
 import { parseCorrectionsFromText, applyCorrectionsFromCase } from '../util/corrections';
-import { findSelectedOptionId } from '../util/quoteCorrections';
 
 function stripHtml(s: string) {
   return s
@@ -123,42 +122,7 @@ export async function ingestFromGmail(accessToken: string, startHistoryId: strin
         }
       }
 
-      // Quote selection on Sent: update only if the quote marker is present in the body
-      console.log('Checking for quote marker in sent message', msg.id);
-      logger.info('Checking for quote marker in sent message', { msgId: msg.id });
-      const markerId = text.match(/FYXER-QUOTE-ID:([A-Za-z0-9_-]+)/i)?.[1] || '';
-      const selectedIdFromText = findSelectedOptionId(text) || 'QOPT-1';
-      try {
-        if (markerId) {
-          const targetRef = db.collection('quotes').doc(markerId);
-          const snap = await targetRef.get();
-          if (snap.exists) {
-            const qd = snap.data() as any;
-            if (!(qd?.status === 'sent' && qd?.sentMessageId)) {
-              const options = (qd.options || []) as Array<any>;
-              const chosen = options.find((o: any) => o.id === selectedIdFromText) || options[0] || null;
-              await targetRef.update({
-                status: 'sent',
-                sentAt: Date.now(),
-                sentMessageId: msg.id,
-                selectedOptionId: chosen?.id || null,
-                selectedOption: chosen || null
-              });
-              await db.collection('events').add({
-                type: 'quote.sent',
-                quoteId: targetRef.id,
-                selectedOptionId: chosen?.id || null,
-                mailboxId,
-                messageId: msg.id,
-                ts: Date.now(),
-                via: 'marker'
-              });
-            }
-          }
-        }
-      } catch (e: any) {
-        await db.collection('events').add({ type: 'gmail.quote.sent.error', mailboxId, messageId: msg.id, quoteId: markerId || null, error: String(e?.message || e), ts: Date.now() });
-      }
+      // Quote selection via email is disabled.
     }
   }
 

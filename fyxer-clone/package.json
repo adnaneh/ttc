@@ -6,8 +6,8 @@
     "build": "npm -w packages/shared run build && npm -w apps/functions run build && npm -w apps/web run build",
     "lint": "echo \"add your linter here\"",
     "web": "npm -w apps/web run dev",
-    "functions": "npm run emulators:kill && npm -w apps/functions run dev:bridge",
-    "emulators:kill": "bash scripts/kill_firebase_emulators.sh",
+    "functions": "npm run emulators:kill && ./scripts/wait_for_emulators_down.sh && npm -w apps/functions run dev:bridge",
+    "emulators:kill": "./scripts/kill_firebase_emulators.sh",
     "deploy:functions": "npm -w packages/shared run build && npm -w apps/functions run build && mkdir -p apps/functions/lib/_shared && cp -R packages/shared/lib/* apps/functions/lib/_shared/ && firebase use the-trading-company-001 && firebase deploy --only functions"
   }
 }

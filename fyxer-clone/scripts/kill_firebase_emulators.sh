@@ -25,17 +25,13 @@ kill_pids(){
 
 # --- 1) Try the Emulator Hub (if present) ----------------------------------
 # Probe all local LISTEN ports quickly for a Hub /emulators endpoint
-declare -A hubs=()
+hub_killed=0
 while read -r port; do
   body="$(curl_json "http://127.0.0.1:${port}/emulators")"
-  [[ "$body" == *'"hub"'* && "$body" == *'"port"'* ]] && hubs["127.0.0.1:${port}"]="$body"
-done < <(lsof -nP -iTCP -sTCP:LISTEN 2>/dev/null \
-        | sed -nE 's#.*:([0-9]+) \(LISTEN\)#\1#p' | sort -un)
-
-if (( ${#hubs[@]} )); then
-  for hp in "${!hubs[@]}"; do
-    log "Found Emulator Hub at http://$hp"
-    emus="${hubs[$hp]}"
+  # detect by substring, not equality
+  if [[ "$body" == *'"hub"'* && "$body" == *'"port"'* ]]; then
+    log "Found Emulator Hub at http://127.0.0.1:${port}"
+    emus="$body"
 
     # Try graceful Firestore shutdown if present
     if grep -q '"firestore"' <<<"$emus"; then
@@ -46,10 +42,20 @@ if (( ${#hubs[@]} )); then
 
     # Kill listeners for every emulator the Hub reports (including the hub itself)
     readarray -t ports < <(grep -oE '"port"\s*:\s*[0-9]+' <<<"$emus" | awk -F: '{gsub(/ /,"",$2); print $2}' | sort -un)
-    # Listeners only; avoids killing client connections.
-    pids="$(lsof -nP -sTCP:LISTEN -tiTCP:$(IFS=,; echo "${ports[*]}") 2>/dev/null | sort -u | xargs -r echo || true)"
+    # Collect listeners per-port (macOS lsof doesn't accept comma-separated port lists reliably)
+    pids=""
+    for p in "${ports[@]}"; do
+      ppids="$(lsof -nP -sTCP:LISTEN -tiTCP:$p 2>/dev/null | sort -u | xargs -r echo || true)"
+      [[ -z "${ppids// }" ]] || pids+=" $ppids"
+    done
+    pids="$(tr ' ' '\n' <<<"$pids" | sort -u | xargs -r echo || true)"
     kill_pids "$pids" "Hub-reported emulator listeners"
-  done
+    hub_killed=1
+  fi
+done < <(lsof -nP -iTCP -sTCP:LISTEN 2>/dev/null \
+        | sed -nE 's#.*:([0-9]+) \(LISTEN\)#\1#p' | sort -un)
+
+if (( hub_killed )); then
   log "Done via Hub."
   exit 0
 fi

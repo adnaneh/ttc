@@ -4,6 +4,7 @@ import { messagesDelta, getMessage } from '../connectors/outlook';
 import { PubSub } from '@google-cloud/pubsub';
 import { downloadAndStoreOutlookAttachments } from '../util/outlookAttachments';
 import { parseCorrectionsFromText, applyCorrectionsFromCase } from '../util/corrections';
+import { applyLabel } from '../util/labels';
 
 const pubsub = new PubSub();
 
@@ -106,10 +107,21 @@ export async function ingestOutlookFolderChanges(accessToken: string, mailboxId:
             bodyPtr: ptr
           }
         });
+
+        // Triage: labels + default reply draft
+        await pubsub.topic('triage.process').publishMessage({
+          json: { provider: 'outlook', mailboxId, threadId: msg.conversationId, messageId: id, from, subject, bodyPtr: ptr }
+        });
       }
 
-      // SentItems: parse corrections and apply to SAP HANA if present
+      // SentItems: always mark thread as actioned, then parse corrections if present
       if (folder === 'SentItems') {
+        try {
+          await applyLabel({ provider: 'outlook', token: accessToken, mailboxId, threadId: msg.conversationId, messageId: id, label: 'ACTIONED' });
+        } catch (_) {
+          // best effort
+        }
+
         const text = stripHtml(html);
         const { caseId, corrections } = parseCorrectionsFromText(text);
         if (caseId && Object.keys(corrections).length) {

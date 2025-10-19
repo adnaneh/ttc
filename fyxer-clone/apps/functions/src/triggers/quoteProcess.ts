@@ -9,6 +9,7 @@ import { getFreshGraphAccessTokenForMailbox, getFreshAccessTokenForMailbox } fro
 import { createOutlookDraftReply } from '../util/outlookDraft';
 import { createGmailDraftSimpleReply } from '../util/gmailDraft';
 import { orgFeature } from '../util/orgFeatures';
+import { applyLabel } from '../util/labels';
 
 function strip(html: string) {
   return html
@@ -81,6 +82,7 @@ export const quoteProcess = onMessagePublished(
           subject: `Re: ${subject || 'Your freight quote'}`,
           htmlBody: html
         });
+        await applyLabel({ provider: 'outlook', token, mailboxId, threadId, messageId, label: 'SPOT_RATE' });
       } else if (provider === 'gmail') {
         const token = await getFreshAccessTokenForMailbox(db.collection('mailboxes').doc(mailboxId).path);
         await createGmailDraftSimpleReply({
@@ -90,6 +92,7 @@ export const quoteProcess = onMessagePublished(
           subject: `Re: ${subject || 'Your freight quote'}`,
           htmlBody: html
         });
+        await applyLabel({ provider: 'gmail', token, mailboxId, threadId, messageId, label: 'SPOT_RATE' });
       }
 
       // 6) Persist a quote case document

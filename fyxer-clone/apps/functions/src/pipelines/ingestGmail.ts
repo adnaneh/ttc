@@ -6,6 +6,8 @@ import { PubSub } from '@google-cloud/pubsub';
 import { downloadAndStoreGmailAttachments } from '../util/gmailAttachments';
 import { logger } from '../util/logger';
 import { parseCorrectionsFromText, applyCorrectionsFromCase } from '../util/corrections';
+import { applyLabel } from '../util/labels';
+import { getFreshAccessTokenForMailbox } from '../util/tokenStore';
 
 function stripHtml(s: string) {
   return s
@@ -95,6 +97,19 @@ export async function ingestFromGmail(accessToken: string, startHistoryId: strin
           bodyPtr: ptr
         }
       });
+
+      // Enqueue triage (labels + default reply draft)
+      await pubsub.topic('triage.process').publishMessage({
+        json: {
+          provider: 'gmail',
+          mailboxId,
+          threadId: msg.threadId,
+          messageId: msg.id,
+          from: fromEmail,
+          subject: hget('Subject'),
+          bodyPtr: ptr
+        }
+      });
     }
 
     // Enqueue embeddings (skip drafts to reduce load/loops)
@@ -102,8 +117,17 @@ export async function ingestFromGmail(accessToken: string, startHistoryId: strin
       await pubsub.topic('mail.embed').publishMessage({ json: { mailboxId, messageId: msg.id } });
     }
 
-    // For Sent messages: parse and apply corrections exactly once via history
+    // For Sent messages: always mark thread as actioned, then parse/apply corrections once
     if (isSent) {
+      if (msg.threadId) {
+        try {
+          const tok = await getFreshAccessTokenForMailbox(db.collection('mailboxes').doc(mailboxId).path);
+          await applyLabel({ provider: 'gmail', token: tok, mailboxId, threadId: msg.threadId, messageId: msg.id!, label: 'ACTIONED' });
+        } catch (e) {
+          // best effort
+        }
+      }
+
       const textRaw = (textFallback || html || '') as string;
       const text = stripHtml(textRaw);
       const xcase = headers.find(x => x.name.toLowerCase() === 'x-fyxer-case-id')?.value;
@@ -117,11 +141,18 @@ export async function ingestFromGmail(accessToken: string, startHistoryId: strin
         try {
           await applyCorrectionsFromCase(caseId, corrections);
           await db.collection('events').add({ type: 'gmail.corrections.applied', caseId, messageId: msg.id, mailboxId, ts: Date.now() });
+
+          // Already labeled as actioned above for all sent messages
         } catch (e: any) {
           await db.collection('events').add({ type: 'gmail.corrections.error', caseId, messageId: msg.id, mailboxId, error: String(e?.message || e), ts: Date.now() });
         }
       }
 
+      // Default reply detection (mark actioned when our default draft is sent)
+      const hasDefaultHeader = headers.find(h => h.name.toLowerCase() === 'x-fyxer-default-reply')?.value === '1';
+      const hasDefaultMarker = /FYXER-DEFAULT-REPLY\s*:\s*1/.test(text);
+      // Already labeled as actioned above for all sent messages
+    
       // Quote selection via email is disabled.
     }
   }

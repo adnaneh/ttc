@@ -7,6 +7,7 @@ import { db } from '../util/firestore';
 import { readByPtr } from '../util/storage';
 import { getFreshAccessTokenForMailbox, getFreshGraphAccessTokenForMailbox } from '../util/tokenStore';
 import { google } from 'googleapis';
+import { applyLabel } from '../util/labels';
 
 function escapeHtml(s: string) { return String(s).replace(/[&<>\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]!)); }
 
@@ -94,6 +95,8 @@ export async function processInvoiceAttachment(args: {
       htmlBody
     });
     draftId = draft.id!;
+    // Label thread as incoherence
+    await applyLabel({ provider: 'gmail', token, mailboxId: args.mailboxId, threadId: args.threadId, messageId: args.messageId, label: 'INCOHERENCE' });
   } else {
     // Outlook reply draft addressing notifyTo (replying to the specific message keeps the conversation)
     const token = await getFreshGraphAccessTokenForMailbox(db.collection('mailboxes').doc(args.mailboxId).path);
@@ -105,6 +108,7 @@ export async function processInvoiceAttachment(args: {
       htmlBody
     });
     draftId = outId;
+    await applyLabel({ provider: 'outlook', token, mailboxId: args.mailboxId, threadId: args.threadId, messageId: args.messageId, label: 'INCOHERENCE' });
   }
 
   await caseRef.set({

@@ -120,12 +120,8 @@ export async function ingestFromGmail(accessToken: string, startHistoryId: strin
     // For Sent messages: always mark thread as actioned, then parse/apply corrections once
     if (isSent) {
       if (msg.threadId) {
-        try {
-          const tok = await getFreshAccessTokenForMailbox(db.collection('mailboxes').doc(mailboxId).path);
-          await applyLabel({ provider: 'gmail', token: tok, mailboxId, threadId: msg.threadId, messageId: msg.id!, label: 'ACTIONED' });
-        } catch (e) {
-          // best effort
-        }
+        const tok = await getFreshAccessTokenForMailbox(db.collection('mailboxes').doc(mailboxId).path);
+        await applyLabel({ provider: 'gmail', token: tok, mailboxId, threadId: msg.threadId, messageId: msg.id!, label: 'ACTIONED' });
       }
 
       const textRaw = (textFallback || html || '') as string;

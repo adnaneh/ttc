@@ -17,7 +17,7 @@ export async function addThreadLabelFirestore(threadId: string, label: string) {
   await db.collection('threads').doc(threadId).set({ labels: [] }, { merge: true });
   await db.collection('threads').doc(threadId).update({
     labels: FieldValue.arrayUnion(label)
-  } as any).catch(() => {});
+  } as any);
 }
 
 // ---------- Gmail labels ----------
@@ -115,4 +115,3 @@ export async function applyLabel(params: {
   }
   await addThreadLabelFirestore(params.threadId, name);
 }
-

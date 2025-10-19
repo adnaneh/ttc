@@ -116,11 +116,7 @@ export async function ingestOutlookFolderChanges(accessToken: string, mailboxId:
 
       // SentItems: always mark thread as actioned, then parse corrections if present
       if (folder === 'SentItems') {
-        try {
-          await applyLabel({ provider: 'outlook', token: accessToken, mailboxId, threadId: msg.conversationId, messageId: id, label: 'ACTIONED' });
-        } catch (_) {
-          // best effort
-        }
+        await applyLabel({ provider: 'outlook', token: accessToken, mailboxId, threadId: msg.conversationId, messageId: id, label: 'ACTIONED' });
 
         const text = stripHtml(html);
         const { caseId, corrections } = parseCorrectionsFromText(text);

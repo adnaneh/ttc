@@ -65,7 +65,7 @@ export const authOutlookCallback = onRequest(async (req, res) => {
   while (q['@odata.nextLink']) q = await messagesDelta(fresh, q['@odata.nextLink'], 'SentItems');
   await mailboxRef.update({ 'sync.sent.deltaLink': q['@odata.deltaLink'] || '' });
 
-  await stateSnap.ref.delete().catch(() => {});
+  await stateSnap.ref.delete();
 
   const back = ensureUrl(process.env.OAUTH_SUCCESS_REDIRECT) ?? 'https://example.com/connected';
   res.redirect(302, `${back}?provider=outlook&email=${encodeURIComponent(email)}`);

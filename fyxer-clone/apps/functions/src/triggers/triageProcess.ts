@@ -10,7 +10,7 @@ import { outlookBusy } from '../connectors/outlookCal';
 import { detectAvailabilityIntent, extractProposedSlots } from '../util/availabilityParse';
 import { suggestAvailability, Slot } from '../util/availability';
 import { renderAvailabilityHtml, renderAcceptanceHtml } from '../util/availabilityReply';
-import { createGmailDraftSimpleReply, getMessageRfcHeaders } from '../util/gmailDraft';
+import { createGmailDraftSimpleReply } from '../util/gmailDraft';
 import { createOutlookDraftReply } from '../util/outlookDraft';
 import { makeDefaultReplyHTML } from '../util/defaultReply';
 
@@ -108,11 +108,8 @@ export const triageProcess = onMessagePublished('triage.process', async (event) 
       }
 
       if (provider === 'gmail') {
-        // Build RFC reply headers from the specific message
-        const { messageId: rfcId, references } = await getMessageRfcHeaders({ accessToken: token, messageId });
-        const extra = rfcId ? { 'In-Reply-To': rfcId, 'References': (references ? `${references} ` : '') + rfcId } : undefined;
-        // Keep the exact original subject (can be empty)
-        await createGmailDraftSimpleReply({ accessToken: token, threadId, to: from, subject: subject || '', htmlBody, extraHeaders: extra });
+        // Use the exact original subject to match inbox-zero behavior
+        await createGmailDraftSimpleReply({ accessToken: token, threadId, to: from, subject: subject || 'Availability', htmlBody });
       } else {
         await createOutlookDraftReply({ accessToken: token, replyToMessageId: messageId, to: from, subject: `Re: ${subject || 'Availability'}`, htmlBody });
       }
@@ -133,9 +130,7 @@ export const triageProcess = onMessagePublished('triage.process', async (event) 
       const customerName = titleCaseEmailLocal(from);
       const replyHtml = await makeDefaultReplyHTML({ customerName, subject, plainText: text });
       if (provider === 'gmail') {
-        const { messageId: rfcId, references } = await getMessageRfcHeaders({ accessToken: token, messageId });
-        const replyHeaders = rfcId ? { 'In-Reply-To': rfcId, 'References': (references ? `${references} ` : '') + rfcId } : {};
-        await createGmailDraftSimpleReply({ accessToken: token, threadId, to: from, subject: subject || '', htmlBody: replyHtml, extraHeaders: { ...replyHeaders, 'X-Fyxer-Default-Reply': '1' } });
+        await createGmailDraftSimpleReply({ accessToken: token, threadId, to: from, subject: (subject || '').trim() || 'Re:', htmlBody: replyHtml, extraHeaders: { 'X-Fyxer-Default-Reply': '1' } });
       } else {
         await createOutlookDraftReply({ accessToken: token, replyToMessageId: messageId, to: from, subject: `Re: ${subject || ''}`.trim(), htmlBody: replyHtml });
       }

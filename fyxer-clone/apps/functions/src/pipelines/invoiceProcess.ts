@@ -76,17 +76,12 @@ export async function processInvoiceAttachment(args: {
   let draftId = '';
   if (args.provider === 'gmail') {
     const token = await getFreshAccessTokenForMailbox(db.collection('mailboxes').doc(args.mailboxId).path);
-    // Fetch RFC headers from the specific message for threading
-    const { getMessageRfcHeaders } = await import('../util/gmailDraft');
-    const { messageId: rfcId, references } = await getMessageRfcHeaders({ accessToken: token, messageId: args.messageId });
 
     const draft = await createGmailDraftReply({
       accessToken: token,
       threadId: args.threadId,
       to: notifyTo,
       subject,
-      inReplyTo: rfcId || undefined,
-      references: rfcId ? ((references ? `${references} ` : '') + rfcId) : undefined,
       caseId: caseRef.id,
       textBody,
       htmlBody

@@ -23,14 +23,16 @@ export async function getMessageRfcHeaders(params: { accessToken: string; messag
       userId: 'me',
       id: params.messageId,
       format: 'metadata',
-      metadataHeaders: ['Message-Id', 'References']
+      metadataHeaders: ['Message-Id', 'References', 'Reply-To', 'From']
     });
     const headers = (msg.data.payload?.headers || []) as Array<{ name?: string; value?: string }>;
     const messageId = headers.find(h => (h.name || '').toLowerCase() === 'message-id')?.value || '';
     const references = headers.find(h => (h.name || '').toLowerCase() === 'references')?.value || '';
-    return { messageId, references };
+    const replyTo = headers.find(h => (h.name || '').toLowerCase() === 'reply-to')?.value || '';
+    const from = headers.find(h => (h.name || '').toLowerCase() === 'from')?.value || '';
+    return { messageId, references, replyTo, from };
   } catch {
-    return { messageId: '', references: '' };
+    return { messageId: '', references: '', replyTo: '', from: '' };
   }
 }
 

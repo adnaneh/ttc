@@ -87,12 +87,13 @@ export const quoteProcess = onMessagePublished(
         await setTriageLabelExclusive({ provider: 'outlook', token, mailboxId, threadId, messageId, key: 'TO_RESPOND' });
       } else if (provider === 'gmail') {
         const token = await getFreshAccessTokenForMailbox(db.collection('mailboxes').doc(mailboxId).path);
-        const { messageId: rfcId, references } = await getMessageRfcHeaders({ accessToken: token, messageId });
+        const { messageId: rfcId, references, replyTo: rfcReplyTo, from: rfcFrom } = await getMessageRfcHeaders({ accessToken: token, messageId });
         const extra = rfcId ? { 'In-Reply-To': rfcId, 'References': (references ? `${references} ` : '') + rfcId } : undefined;
+        const targetTo = (rfcReplyTo || rfcFrom || from);
         await createGmailDraftSimpleReply({
           accessToken: token,
           threadId,
-          to: from,
+          to: targetTo,
           // Keep subject identical to original (can be empty)
           subject: subject || '',
           htmlBody: html,

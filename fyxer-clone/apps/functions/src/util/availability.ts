@@ -80,13 +80,16 @@ export function pickSlots(free: Slot[], cfg: CalConfig, constraints: AvailConstr
 export function formatSlots(slots: Slot[], tz: string): Array<{ label: string }> {
   const fmtDate = new Intl.DateTimeFormat('en', { timeZone: tz, weekday: 'short', month: 'short', day: '2-digit' });
   const fmtTime = new Intl.DateTimeFormat('en', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false });
-  const zone = new Intl.DateTimeFormat('en', { timeZone: tz, timeZoneName: 'short' }).format(new Date()).split(' ').pop();
+  const fmtZone = new Intl.DateTimeFormat('en', { timeZone: tz, timeZoneName: 'short', hour: '2-digit' });
 
   return slots.map(s => {
     const d = fmtDate.format(new Date(s.startMs));
     const t1 = fmtTime.format(new Date(s.startMs));
     const t2 = fmtTime.format(new Date(s.endMs));
-    return { label: `${d} · ${t1}–${t2} ${zone} (${tz})` };
+    const parts = fmtZone.formatToParts(new Date(s.startMs));
+    const zonePart = parts.find(p => p.type === 'timeZoneName')?.value || '';
+    const suffix = tz === 'UTC' ? '' : (zonePart ? ` ${zonePart}` : '');
+    return { label: `${d} · ${t1}–${t2}${suffix}` };
   });
 }
 
@@ -117,4 +120,3 @@ export function suggestAvailability(busy: Slot[], cfg: CalConfig, constraints: A
   }
   return out.slice(0, cfg.suggestCount);
 }
-

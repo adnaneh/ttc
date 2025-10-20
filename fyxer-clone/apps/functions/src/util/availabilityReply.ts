@@ -16,3 +16,16 @@ export function renderAvailabilityHtml(params: {
   return body;
 }
 
+export function renderAcceptanceHtml(params: {
+  customerName: string;
+  tz: string;
+  slot: Slot;
+}) {
+  const label = formatSlots([params.slot], params.tz)[0]?.label || '';
+  const body = `<p>Dear ${params.customerName || 'there'},</p>
+<p>Thanks for the options — the following time works for me:</p>
+<p><strong>${label}</strong></p>
+<p>I’ll send over a calendar invite with the Zoom details.</p>
+<p>Best regards,<br/>Your Team</p>`;
+  return body;
+}

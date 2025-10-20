@@ -28,7 +28,17 @@ export async function ingestFromGmail(accessToken: string, startHistoryId: strin
   }
 
   for (const msgId of seen) {
-    const msg = await getMessage(accessToken, msgId);
+    let msg: any;
+    try {
+      msg = await getMessage(accessToken, msgId);
+    } catch (e: any) {
+      const status = e?.response?.status || e?.code || '';
+      const message = String(e?.message || e);
+      // Gracefully skip messages that cannot be fetched (deleted or cursor drift)
+      await db.collection('events').add({ type: 'gmail.message_fetch_error', mailboxId, messageId: String(msgId), status, error: message, ts: Date.now() });
+      logger.warn('gmail.message_fetch_error', { messageId: String(msgId), status, error: message });
+      continue;
+    }
     const { html, textFallback } = extractHtmlFromPayload(msg.payload as any);
     const ptr = await saveMailBodyPtr(`mail/${mailboxId}/${msg.id}.html`, html || '<!-- empty -->');
 

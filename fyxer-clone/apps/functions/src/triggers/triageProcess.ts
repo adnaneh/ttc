@@ -7,9 +7,9 @@ import { setTriageLabelExclusive, addPersistentLabel } from '../util/labels';
 import { getOrgCalendarConfig } from '../util/calendarConfig';
 import { gcalBusyPrimary } from '../connectors/gcal';
 import { outlookBusy } from '../connectors/outlookCal';
-import { detectAvailabilityIntent } from '../util/availabilityParse';
+import { detectAvailabilityIntent, extractProposedSlots } from '../util/availabilityParse';
 import { suggestAvailability, Slot } from '../util/availability';
-import { renderAvailabilityHtml } from '../util/availabilityReply';
+import { renderAvailabilityHtml, renderAcceptanceHtml } from '../util/availabilityReply';
 import { createGmailDraftSimpleReply } from '../util/gmailDraft';
 import { createOutlookDraftReply } from '../util/outlookDraft';
 import { makeDefaultReplyHTML } from '../util/defaultReply';
@@ -18,6 +18,11 @@ function strip(html: string) { return html.replace(/<style[\s\S]*?<\/style>/gi,'
 function titleCaseEmailLocal(email: string) {
   const local = (email || '').split('@')[0] || 'Customer';
   return local.split(/[.\-_]/).map(s => s ? s[0].toUpperCase()+s.slice(1) : s).join(' ');
+}
+
+function isInsufficientScopeError(e: any): boolean {
+  const msg = (e?.message || e?.response?.data?.error?.message || '').toString().toLowerCase();
+  return msg.includes('insufficient') && msg.includes('scope');
 }
 
 export const triageProcess = onMessagePublished('triage.process', async (event) => {
@@ -61,17 +66,46 @@ export const triageProcess = onMessagePublished('triage.process', async (event) 
       const timeMaxISO = end.toISOString();
 
       let busy: Slot[] = [];
-      if (provider === 'gmail') {
-        const intervals = await gcalBusyPrimary(token, timeMinISO, timeMaxISO);
-        busy = intervals.map(([s, e]) => ({ startMs: s, endMs: e }));
-      } else {
-        const intervals = await outlookBusy(token, timeMinISO, timeMaxISO, cfg.timezone);
-        busy = intervals.map(([s, e]) => ({ startMs: s, endMs: e }));
+      try {
+        if (provider === 'gmail') {
+          const intervals = await gcalBusyPrimary(token, timeMinISO, timeMaxISO);
+          busy = intervals.map(([s, e]) => ({ startMs: s, endMs: e }));
+        } else {
+          const intervals = await outlookBusy(token, timeMinISO, timeMaxISO, cfg.timezone);
+          busy = intervals.map(([s, e]) => ({ startMs: s, endMs: e }));
+        }
+      } catch (e: any) {
+        if (provider === 'gmail' && isInsufficientScopeError(e)) {
+          // Graceful degradation: log, label, and exit without crashing the pipeline
+          await db.collection('events').add({ type: 'availability.missing_scope', error: String(e?.message || e), mailboxId, provider, threadId, messageId, ts: Date.now() });
+          logger.error('availability.calendar_scope_missing', { err: String(e?.message || e) });
+          await setTriageLabelExclusive({ provider, token, mailboxId, threadId, messageId, key: 'TO_RESPOND' });
+          return;
+        }
+        throw e;
       }
 
-      const slots = suggestAvailability(busy, cfg, avail.constraints);
+      // If the sender proposed explicit slots, prefer those that fit our calendar
+      const proposals = extractProposedSlots(text, cfg.timezone);
+
+      const overlap = (a: Slot, b: Slot) => !(a.endMs <= b.startMs || a.startMs >= b.endMs);
+      let slots: Slot[] = proposals.slots.length
+        ? proposals.slots
+            .slice()
+            .sort((a, b) => a.startMs - b.startMs)
+            .filter(s => busy.every(b => !overlap(s, b)))
+        : [];
+
       const customerName = titleCaseEmailLocal(from);
-      const htmlBody = renderAvailabilityHtml({ customerName, tz: cfg.timezone, slots });
+      let htmlBody: string;
+      if (slots.length) {
+        // Accept the first conflict-free proposed time
+        htmlBody = renderAcceptanceHtml({ customerName, tz: proposals.displayTz || cfg.timezone, slot: slots[0] });
+      } else {
+        // Fall back to our own suggestions if no proposal or all conflict
+        const sugg = suggestAvailability(busy, cfg, avail.constraints);
+        htmlBody = renderAvailabilityHtml({ customerName, tz: proposals.displayTz || cfg.timezone, slots: sugg });
+      }
 
       if (provider === 'gmail') {
         await createGmailDraftSimpleReply({ accessToken: token, threadId, to: from, subject: `Re: ${subject || 'Availability'}`, htmlBody });

@@ -11,11 +11,11 @@ export const LABEL_META: Record<LabelKey, {
   gmailColor: { backgroundColor: string, textColor: string },
   outlookColor: string
 }> = {
-  INCOHERENCE: { name: '0: incoherence', gmailColor: { backgroundColor: '#d93025', textColor: '#ffffff' }, outlookColor: 'preset3' },
+  INCOHERENCE: { name: '5: incoherence', gmailColor: { backgroundColor: '#d93025', textColor: '#ffffff' }, outlookColor: 'preset3' },
   TO_RESPOND:  { name: '1: to respond', gmailColor: { backgroundColor: '#f29900', textColor: '#ffffff' }, outlookColor: 'preset7' },
   FYI:         { name: '2: FYI',        gmailColor: { backgroundColor: '#1a73e8', textColor: '#ffffff' }, outlookColor: 'preset1' },
-  ACTIONED:    { name: '3: actioned',   gmailColor: { backgroundColor: '#188038', textColor: '#ffffff' }, outlookColor: 'preset10' },
-  SPOT_RATE:   { name: '4: spot rate requests', gmailColor: { backgroundColor: '#9334e6', textColor: '#ffffff' }, outlookColor: 'preset5' }
+  ACTIONED:    { name: '3: actioned',   gmailColor: { backgroundColor: '#16a765', textColor: '#ffffff' }, outlookColor: 'preset10' },
+  SPOT_RATE:   { name: '4: spot rate request', gmailColor: { backgroundColor: '#9334e6', textColor: '#ffffff' }, outlookColor: 'preset5' }
 };
 
 // ---------------- Firestore helpers ----------------
@@ -56,6 +56,11 @@ async function ensureGmailLabelByKey(token: string, mailboxId: string, key: Labe
 
   const gmail = gmailClientFromAccessToken(token);
 
+  const isGmailLabelColorError = (err: any): boolean => {
+    const msg = (err?.message || err?.response?.data?.error?.message || '').toString().toLowerCase();
+    return msg.includes('label color') && msg.includes('allowed') && msg.includes('palette');
+  };
+
   const existing = map[key];
   if (existing?.id) {
     try {
@@ -63,11 +68,23 @@ async function ensureGmailLabelByKey(token: string, mailboxId: string, key: Labe
       const needRename = cur.data.name !== meta.name;
       const needColor = JSON.stringify(cur.data.color || {}) !== JSON.stringify(meta.gmailColor);
       if (needRename || needColor) {
-        await gmail.users.labels.update({
-          userId: 'me',
-          id: existing.id,
-          requestBody: { name: meta.name, color: meta.gmailColor, labelListVisibility: 'labelShow', messageListVisibility: 'show' }
-        });
+        try {
+          await gmail.users.labels.update({
+            userId: 'me',
+            id: existing.id,
+            requestBody: { name: meta.name, color: meta.gmailColor, labelListVisibility: 'labelShow', messageListVisibility: 'show' }
+          });
+        } catch (e) {
+          if (isGmailLabelColorError(e)) {
+            await gmail.users.labels.update({
+              userId: 'me',
+              id: existing.id,
+              requestBody: { name: meta.name, labelListVisibility: 'labelShow', messageListVisibility: 'show' }
+            });
+          } else {
+            throw e;
+          }
+        }
       }
       if (existing.name !== meta.name) await mapDoc.set({ [key]: { id: existing.id, name: meta.name } }, { merge: true });
       return existing.id;
@@ -83,10 +100,22 @@ async function ensureGmailLabelByKey(token: string, mailboxId: string, key: Labe
     return hit.id;
   }
 
-  const created = await gmail.users.labels.create({
-    userId: 'me',
-    requestBody: { name: meta.name, color: meta.gmailColor, labelListVisibility: 'labelShow', messageListVisibility: 'show' }
-  });
+  let created;
+  try {
+    created = await gmail.users.labels.create({
+      userId: 'me',
+      requestBody: { name: meta.name, color: meta.gmailColor, labelListVisibility: 'labelShow', messageListVisibility: 'show' }
+    });
+  } catch (e) {
+    if (isGmailLabelColorError(e)) {
+      created = await gmail.users.labels.create({
+        userId: 'me',
+        requestBody: { name: meta.name, labelListVisibility: 'labelShow', messageListVisibility: 'show' }
+      });
+    } else {
+      throw e;
+    }
+  }
   const id = created.data.id!;
   await mapDoc.set({ [key]: { id, name: meta.name } }, { merge: true });
   return id;
@@ -207,4 +236,36 @@ export async function addPersistentLabel(params: {
   } else {
     await outlookAddPersistent(params.token, params.mailboxId, params.threadId, params.messageId, params.key);
   }
+}
+
+// Convenience wrapper to apply any label by key
+export async function applyLabel(params: {
+  provider: Provider; token: string; mailboxId: string;
+  threadId: string; messageId: string; label: LabelKey;
+}) {
+  if (params.label === 'TO_RESPOND' || params.label === 'FYI' || params.label === 'ACTIONED') {
+    await setTriageLabelExclusive({
+      provider: params.provider,
+      token: params.token,
+      mailboxId: params.mailboxId,
+      threadId: params.threadId,
+      messageId: params.messageId,
+      key: params.label
+    });
+    return;
+  }
+
+  if (params.label === 'INCOHERENCE' || params.label === 'SPOT_RATE') {
+    await addPersistentLabel({
+      provider: params.provider,
+      token: params.token,
+      mailboxId: params.mailboxId,
+      threadId: params.threadId,
+      messageId: params.messageId,
+      key: params.label
+    });
+    return;
+  }
+
+  throw new Error(`applyLabel: unsupported label ${params.label}`);
 }

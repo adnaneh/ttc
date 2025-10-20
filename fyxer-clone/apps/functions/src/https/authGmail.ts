@@ -13,7 +13,8 @@ export const authGmailStart = onRequest(async (req, res) => {
   const oauth = gmailOAuthClient();
   const scopes = [
     'https://www.googleapis.com/auth/gmail.modify',
-    'https://www.googleapis.com/auth/userinfo.email'
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/calendar.readonly'
   ];
   const url = oauth.generateAuthUrl({
     access_type: 'offline',
@@ -51,7 +52,7 @@ export const authGmailCallback = onRequest(async (req, res) => {
     userId: state.userId,
     type: 'gmail',
     providerUserId: prof.emailAddress,
-    scopes: ['gmail.modify', 'userinfo.email'],
+    scopes: ['gmail.modify', 'userinfo.email', 'calendar.readonly'],
     tokenRef: '',
     sync: { cursor: String(prof.historyId ?? ''), watchExpiration: 0 },
     createdAt: Date.now()

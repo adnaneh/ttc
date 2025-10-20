@@ -52,7 +52,7 @@ export function outlookAuthUrl(stateId: string) {
     response_type: 'code',
     redirect_uri: process.env.MS_REDIRECT_URI!,
     response_mode: 'query',
-    scope: 'offline_access Mail.Read Mail.ReadWrite User.Read',
+    scope: 'offline_access Mail.Read Mail.ReadWrite User.Read Calendars.Read',
     state: stateId
   });
   return `${AUTH_BASE(process.env.MS_TENANT!)}/authorize?${params.toString()}`;

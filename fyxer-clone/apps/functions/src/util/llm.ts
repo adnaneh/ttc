@@ -1,11 +1,13 @@
 import OpenAI from 'openai';
 
-let client: OpenAI | null = null;
+let client!: OpenAI;
+let clientInitialized = false;
 
-function getClient(): OpenAI | null {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) return null;
-  if (!client) client = new OpenAI({ apiKey: key });
+function getClient(key: string): OpenAI {
+  if (!clientInitialized) {
+    client = new OpenAI({ apiKey: key });
+    clientInitialized = true;
+  }
   return client;
 }
 
@@ -16,8 +18,9 @@ function getClient(): OpenAI | null {
 export async function llmExtractShipment(text: string): Promise<{
   qty?: number; equipment?: string; pol?: string; pod?: string; service?: string; etd?: string;
 }> {
-  const openai = getClient();
-  if (!openai) return {};
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) return {};
+  const openai = getClient(key);
   const system = `Extract a freight shipment request into JSON with keys:\n` +
     `{ "qty": number?, "equipment": string?, "pol": string?, "pod": string?, "service": string?, "etd": "YYYY-MM-DD"? }.\n` +
     `- equipment like 20GP, 40HC, 45HC, RF, NOR (no spaces)\n` +
@@ -39,4 +42,3 @@ export async function llmExtractShipment(text: string): Promise<{
     return {};
   }
 }
-

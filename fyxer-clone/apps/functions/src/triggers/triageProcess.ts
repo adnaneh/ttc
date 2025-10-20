@@ -4,8 +4,21 @@ import { db } from '../util/firestore';
 import { readByPtr } from '../util/storage';
 import { getFreshAccessTokenForMailbox, getFreshGraphAccessTokenForMailbox } from '../util/tokenStore';
 import { setTriageLabelExclusive, addPersistentLabel } from '../util/labels';
+import { getOrgCalendarConfig } from '../util/calendarConfig';
+import { gcalBusyPrimary } from '../connectors/gcal';
+import { outlookBusy } from '../connectors/outlookCal';
+import { detectAvailabilityIntent } from '../util/availabilityParse';
+import { suggestAvailability, Slot } from '../util/availability';
+import { renderAvailabilityHtml } from '../util/availabilityReply';
+import { createGmailDraftSimpleReply } from '../util/gmailDraft';
+import { createOutlookDraftReply } from '../util/outlookDraft';
+import { makeDefaultReplyHTML } from '../util/defaultReply';
 
 function strip(html: string) { return html.replace(/<style[\s\S]*?<\/style>/gi,'').replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<[^>]+>/g,' '); }
+function titleCaseEmailLocal(email: string) {
+  const local = (email || '').split('@')[0] || 'Customer';
+  return local.split(/[.\-_]/).map(s => s ? s[0].toUpperCase()+s.slice(1) : s).join(' ');
+}
 
 export const triageProcess = onMessagePublished('triage.process', async (event) => {
   const payload = event.data?.message?.data ? JSON.parse(Buffer.from(event.data.message.data, 'base64').toString()) : {};
@@ -15,9 +28,11 @@ export const triageProcess = onMessagePublished('triage.process', async (event) 
   try {
     const html = (await readByPtr(bodyPtr)).toString('utf8');
     const text = strip(html);
-    const noreply = /no[-\s]?reply|donotreply|do[-\s]?not[-\s]?reply/i.test(from);
-    const shortInfo = text.length < 180 && !/[?]/.test(text);
 
+    // Load org + token
+    const mailboxSnap = await db.collection('mailboxes').doc(mailboxId).get();
+    const orgId = (mailboxSnap.data() as any)?.orgId || 'default';
+    const cfg = await getOrgCalendarConfig(orgId);
     const token = provider === 'gmail'
       ? await getFreshAccessTokenForMailbox(db.collection('mailboxes').doc(mailboxId).path)
       : await getFreshGraphAccessTokenForMailbox(db.collection('mailboxes').doc(mailboxId).path);
@@ -37,13 +52,56 @@ export const triageProcess = onMessagePublished('triage.process', async (event) 
       return;
     }
 
-    // Otherwise decide FYI vs TO_RESPOND
-    if (noreply || shortInfo) {
-      await setTriageLabelExclusive({ provider, token, mailboxId, threadId, messageId, key: 'FYI' });
+    // Availability intent? If yes -> build availability draft from calendar
+    const avail = detectAvailabilityIntent(text);
+    if (avail.isAvailability) {
+      const start = new Date();
+      const end = new Date(Date.now() + cfg.lookaheadDays * 24 * 60 * 60 * 1000);
+      const timeMinISO = start.toISOString();
+      const timeMaxISO = end.toISOString();
+
+      let busy: Slot[] = [];
+      if (provider === 'gmail') {
+        const intervals = await gcalBusyPrimary(token, timeMinISO, timeMaxISO);
+        busy = intervals.map(([s, e]) => ({ startMs: s, endMs: e }));
+      } else {
+        const intervals = await outlookBusy(token, timeMinISO, timeMaxISO, cfg.timezone);
+        busy = intervals.map(([s, e]) => ({ startMs: s, endMs: e }));
+      }
+
+      const slots = suggestAvailability(busy, cfg, avail.constraints);
+      const customerName = titleCaseEmailLocal(from);
+      const htmlBody = renderAvailabilityHtml({ customerName, tz: cfg.timezone, slots });
+
+      if (provider === 'gmail') {
+        await createGmailDraftSimpleReply({ accessToken: token, threadId, to: from, subject: `Re: ${subject || 'Availability'}`, htmlBody });
+      } else {
+        await createOutlookDraftReply({ accessToken: token, replyToMessageId: messageId, to: from, subject: `Re: ${subject || 'Availability'}`, htmlBody });
+      }
+
+      await setTriageLabelExclusive({ provider, token, mailboxId, threadId, messageId, key: 'TO_RESPOND' });
+      await db.collection('events').add({ type: 'availability.drafted', mailboxId, provider, threadId, messageId, ts: Date.now() });
       return;
     }
 
-    await setTriageLabelExclusive({ provider, token, mailboxId, threadId, messageId, key: 'TO_RESPOND' });
+    // FYI vs TO_RESPOND heuristic; if to respond, draft default reply
+    const noreply = /no[-\s]?reply|donotreply|do[-\s]?not[-\s]?reply/i.test(from);
+    const shortInfo = text.length < 180 && !/[?]/.test(text);
+
+    if (noreply || shortInfo) {
+      await setTriageLabelExclusive({ provider, token, mailboxId, threadId, messageId, key: 'FYI' });
+      return;
+    } else {
+      const customerName = titleCaseEmailLocal(from);
+      const replyHtml = await makeDefaultReplyHTML({ customerName, subject, plainText: text });
+      if (provider === 'gmail') {
+        await createGmailDraftSimpleReply({ accessToken: token, threadId, to: from, subject: `Re: ${subject || ''}`.trim(), htmlBody: replyHtml, extraHeaders: { 'X-Fyxer-Default-Reply': '1' } });
+      } else {
+        await createOutlookDraftReply({ accessToken: token, replyToMessageId: messageId, to: from, subject: `Re: ${subject || ''}`.trim(), htmlBody: replyHtml });
+      }
+      await setTriageLabelExclusive({ provider, token, mailboxId, threadId, messageId, key: 'TO_RESPOND' });
+      return;
+    }
   } catch (e: any) {
     await db.collection('events').add({ type: 'triage.error', error: String(e?.message || e), mailboxId, threadId, messageId, ts: Date.now() });
     logger.error('triage.process failed', { err: String(e?.message || e) });

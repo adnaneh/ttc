@@ -11,11 +11,11 @@ export const LABEL_META: Record<LabelKey, {
   gmailColor: { backgroundColor: string, textColor: string },
   outlookColor: string
 }> = {
-  INCOHERENCE: { name: '5: incoherence', gmailColor: { backgroundColor: '#d93025', textColor: '#ffffff' }, outlookColor: 'preset3' },
-  TO_RESPOND:  { name: '1: to respond', gmailColor: { backgroundColor: '#f29900', textColor: '#ffffff' }, outlookColor: 'preset7' },
-  FYI:         { name: '2: FYI',        gmailColor: { backgroundColor: '#1a73e8', textColor: '#ffffff' }, outlookColor: 'preset1' },
+  INCOHERENCE: { name: '5: incoherence', gmailColor: { backgroundColor: '#cc3a21', textColor: '#ffffff' }, outlookColor: 'preset3' },
+  TO_RESPOND:  { name: '1: to respond', gmailColor: { backgroundColor: '#ffad47', textColor: '#ffffff' }, outlookColor: 'preset7' },
+  FYI:         { name: '2: FYI',        gmailColor: { backgroundColor: '#4986e7', textColor: '#ffffff' }, outlookColor: 'preset1' },
   ACTIONED:    { name: '3: actioned',   gmailColor: { backgroundColor: '#16a765', textColor: '#ffffff' }, outlookColor: 'preset10' },
-  SPOT_RATE:   { name: '4: spot rate request', gmailColor: { backgroundColor: '#9334e6', textColor: '#ffffff' }, outlookColor: 'preset5' }
+  SPOT_RATE:   { name: '4: spot rate request', gmailColor: { backgroundColor: '#8e63ce', textColor: '#ffffff' }, outlookColor: 'preset5' }
 };
 
 // ---------------- Firestore helpers ----------------

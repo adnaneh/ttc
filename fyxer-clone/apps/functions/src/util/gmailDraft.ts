@@ -1,5 +1,4 @@
 import { gmailClientFromAccessToken } from '../connectors/gmail';
-import { db } from './firestore';
 
 function b64url(b: Buffer | string) {
   const buf = Buffer.isBuffer(b) ? b : Buffer.from(b, 'utf8');
@@ -22,7 +21,6 @@ export async function createGmailDraftReply(params: {
   to: string;
   subject: string;
   inReplyTo?: string;   // Message-Id to preserve thread (optional when threadId is set)
-  references?: string;  // Optional full References chain; falls back to inReplyTo
   caseId: string;
   textBody: string;
   htmlBody: string;
@@ -35,21 +33,9 @@ export async function createGmailDraftReply(params: {
   };
   if (params.inReplyTo) {
     headers['In-Reply-To'] = params.inReplyTo;
-    headers['References'] = params.references || params.inReplyTo;
+    headers['References'] = params.inReplyTo;
   }
   const raw = composeAltMime(headers, params.textBody, params.htmlBody);
-  try {
-    const headerRaw = raw.split('\r\n\r\n')[0];
-    await db.collection('events').add({
-      type: 'gmail.draft.debug_headers',
-      context: 'createGmailDraftReply',
-      threadId: params.threadId,
-      to: params.to,
-      subject: params.subject,
-      headers: headerRaw,
-      ts: Date.now()
-    });
-  } catch {}
   const res = await gmail.users.drafts.create({
     userId: 'me',
     requestBody: { message: { threadId: params.threadId, raw: b64url(raw) } }
@@ -76,58 +62,10 @@ export async function createGmailDraftSimpleReply(params: {
 
   const headers: Record<string, string> = { To: params.to, Subject: params.subject, ...(params.extraHeaders || {}) };
   const raw = composeAltMime(headers, plain || 'See HTML version.', params.htmlBody);
-  try {
-    const headerRaw = raw.split('\r\n\r\n')[0];
-    await db.collection('events').add({
-      type: 'gmail.draft.debug_headers',
-      context: 'createGmailDraftSimpleReply',
-      threadId: params.threadId,
-      to: params.to,
-      subject: params.subject,
-      headers: headerRaw,
-      ts: Date.now()
-    });
-  } catch {}
 
   const res = await gmail.users.drafts.create({
     userId: 'me',
     requestBody: { message: { threadId: params.threadId, raw: b64url(raw) } }
   });
   return res.data;
-}
-
-// Build robust reply headers from the last message in a Gmail thread.
-// Always points In-Reply-To to the latest message-id and constructs a compact
-// References chain from recent messages to maximize threading reliability.
-export async function buildGmailReplyHeaders(params: {
-  accessToken: string;
-  threadId: string;
-}): Promise<Record<string, string>> {
-  const gmail = gmailClientFromAccessToken(params.accessToken);
-  const thread = await gmail.users.threads.get({
-    userId: 'me',
-    id: params.threadId,
-    format: 'metadata',
-    metadataHeaders: ['Message-Id', 'References']
-  });
-
-  const messages = thread.data.messages || [];
-  if (!messages.length) return {};
-
-  const getH = (m: any, n: string) =>
-    (m.payload?.headers || []).find((x: any) => (x.name || '').toLowerCase() === n.toLowerCase())?.value || '';
-
-  const last = messages[messages.length - 1];
-  const parentMsgId = getH(last, 'Message-Id');
-
-  // Build compact References: up to last 15 message-ids in order
-  const ids = messages.map(m => getH(m, 'Message-Id')).filter(Boolean);
-  const tail = ids.slice(-15).join(' ').trim();
-  const priorRefs = getH(last, 'References');
-  const references = [priorRefs, tail].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
-
-  const out: Record<string, string> = {};
-  if (parentMsgId) out['In-Reply-To'] = parentMsgId;
-  if (references) out['References'] = references;
-  return out;
 }

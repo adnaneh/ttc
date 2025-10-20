@@ -7,7 +7,7 @@ import { compileQuotes } from '../util/quoteSources';
 import { renderQuoteHtml, numberQuoteOptions } from '../util/quoteEmail';
 import { getFreshGraphAccessTokenForMailbox, getFreshAccessTokenForMailbox } from '../util/tokenStore';
 import { createOutlookDraftReply } from '../util/outlookDraft';
-import { createGmailDraftSimpleReply, buildGmailReplyHeaders } from '../util/gmailDraft';
+import { createGmailDraftSimpleReply } from '../util/gmailDraft';
 import { orgFeature } from '../util/orgFeatures';
 import { addPersistentLabel, setTriageLabelExclusive } from '../util/labels';
 
@@ -87,15 +87,12 @@ export const quoteProcess = onMessagePublished(
         await setTriageLabelExclusive({ provider: 'outlook', token, mailboxId, threadId, messageId, key: 'TO_RESPOND' });
       } else if (provider === 'gmail') {
         const token = await getFreshAccessTokenForMailbox(db.collection('mailboxes').doc(mailboxId).path);
-        const headers = await buildGmailReplyHeaders({ accessToken: token, threadId });
-
         await createGmailDraftSimpleReply({
           accessToken: token,
           threadId,
           to: from,
           subject: `Re: ${subject || 'Your freight quote'}`,
-          htmlBody: html,
-          extraHeaders: headers
+          htmlBody: html
         });
         await addPersistentLabel({ provider: 'gmail', token, mailboxId, threadId, messageId, key: 'SPOT_RATE' });
         await setTriageLabelExclusive({ provider: 'gmail', token, mailboxId, threadId, messageId, key: 'TO_RESPOND' });

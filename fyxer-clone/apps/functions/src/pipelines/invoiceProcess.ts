@@ -1,11 +1,12 @@
 import { extractInvoiceFieldsFromPdf, extractInvoiceFieldsFromImage, InvoiceFields } from './invoiceExtract';
 import { fetchInvoiceByIdentifiers } from '../util/hana';
 import { findIncoherences } from '../util/invoiceCompare';
-import { createGmailDraftReply, buildGmailReplyHeaders } from '../util/gmailDraft';
+import { createGmailDraftReply } from '../util/gmailDraft';
 import { createOutlookDraftReply } from '../util/outlookDraft';
 import { db } from '../util/firestore';
 import { readByPtr } from '../util/storage';
 import { getFreshAccessTokenForMailbox, getFreshGraphAccessTokenForMailbox } from '../util/tokenStore';
+import { google } from 'googleapis';
 import { addPersistentLabel, setTriageLabelExclusive } from '../util/labels';
 
 function escapeHtml(s: string) { return String(s).replace(/[&<>\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]!)); }
@@ -74,15 +75,21 @@ export async function processInvoiceAttachment(args: {
   // Create draft based on provider
   let draftId = '';
   if (args.provider === 'gmail') {
+    // Get last message-id header for nice threading (optional)
     const token = await getFreshAccessTokenForMailbox(db.collection('mailboxes').doc(args.mailboxId).path);
-    const replyHeaders = await buildGmailReplyHeaders({ accessToken: token, threadId: args.threadId });
+    const auth = new google.auth.OAuth2();
+    auth.setCredentials({ access_token: token });
+    const gmail = google.gmail({ version: 'v1', auth });
+    const thread = await gmail.users.threads.get({ userId: 'me', id: args.threadId, format: 'metadata', metadataHeaders: ['Message-Id'] });
+    const messages = thread.data.messages || [];
+    const inReplyTo = (messages[messages.length - 1]?.payload?.headers as any[])?.find(h => h.name?.toLowerCase() === 'message-id')?.value;
+
     const draft = await createGmailDraftReply({
       accessToken: token,
       threadId: args.threadId,
       to: notifyTo,
       subject,
-      inReplyTo: replyHeaders['In-Reply-To'],
-      references: replyHeaders['References'],
+      inReplyTo,
       caseId: caseRef.id,
       textBody,
       htmlBody

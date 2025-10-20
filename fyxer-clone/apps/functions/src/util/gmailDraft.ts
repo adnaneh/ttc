@@ -15,12 +15,34 @@ export function composeAltMime(headers: Record<string, string>, text: string, ht
   return head + body;
 }
 
+// Helper to fetch RFC822 headers for a specific Gmail message
+export async function getMessageRfcHeaders(params: { accessToken: string; messageId: string }) {
+  const gmail = gmailClientFromAccessToken(params.accessToken);
+  try {
+    const msg = await gmail.users.messages.get({
+      userId: 'me',
+      id: params.messageId,
+      format: 'metadata',
+      metadataHeaders: ['Message-Id', 'References']
+    });
+    const headers = (msg.data.payload?.headers || []) as Array<{ name?: string; value?: string }>;
+    const messageId = headers.find(h => (h.name || '').toLowerCase() === 'message-id')?.value || '';
+    const references = headers.find(h => (h.name || '').toLowerCase() === 'references')?.value || '';
+    return { messageId, references };
+  } catch {
+    return { messageId: '', references: '' };
+  }
+}
+
+// Note: We do not compute reply headers without a target message. Provide them from caller when needed.
+
 export async function createGmailDraftReply(params: {
   accessToken: string;
   threadId: string;
   to: string;
   subject: string;
   inReplyTo?: string;   // Message-Id to preserve thread (optional when threadId is set)
+  references?: string;  // Full References chain if available
   caseId: string;
   textBody: string;
   htmlBody: string;
@@ -33,7 +55,7 @@ export async function createGmailDraftReply(params: {
   };
   if (params.inReplyTo) {
     headers['In-Reply-To'] = params.inReplyTo;
-    headers['References'] = params.inReplyTo;
+    headers['References'] = params.references || params.inReplyTo;
   }
   const raw = composeAltMime(headers, params.textBody, params.htmlBody);
   const res = await gmail.users.drafts.create({

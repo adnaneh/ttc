@@ -91,7 +91,8 @@ export const quoteProcess = onMessagePublished(
           accessToken: token,
           threadId,
           to: from,
-          subject: `Re: ${subject || 'Your freight quote'}`,
+          // Keep subject identical to original when present to maximize threading compatibility
+          subject: subject || 'Your freight quote',
           htmlBody: html
         });
         await addPersistentLabel({ provider: 'gmail', token, mailboxId, threadId, messageId, key: 'SPOT_RATE' });

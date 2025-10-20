@@ -108,7 +108,8 @@ export const triageProcess = onMessagePublished('triage.process', async (event) 
       }
 
       if (provider === 'gmail') {
-        await createGmailDraftSimpleReply({ accessToken: token, threadId, to: from, subject: `Re: ${subject || 'Availability'}`, htmlBody });
+        // Use the exact original subject to match inbox-zero behavior
+        await createGmailDraftSimpleReply({ accessToken: token, threadId, to: from, subject: subject || 'Availability', htmlBody });
       } else {
         await createOutlookDraftReply({ accessToken: token, replyToMessageId: messageId, to: from, subject: `Re: ${subject || 'Availability'}`, htmlBody });
       }
@@ -129,7 +130,7 @@ export const triageProcess = onMessagePublished('triage.process', async (event) 
       const customerName = titleCaseEmailLocal(from);
       const replyHtml = await makeDefaultReplyHTML({ customerName, subject, plainText: text });
       if (provider === 'gmail') {
-        await createGmailDraftSimpleReply({ accessToken: token, threadId, to: from, subject: `Re: ${subject || ''}`.trim(), htmlBody: replyHtml, extraHeaders: { 'X-Fyxer-Default-Reply': '1' } });
+        await createGmailDraftSimpleReply({ accessToken: token, threadId, to: from, subject: (subject || '').trim() || 'Re:', htmlBody: replyHtml, extraHeaders: { 'X-Fyxer-Default-Reply': '1' } });
       } else {
         await createOutlookDraftReply({ accessToken: token, replyToMessageId: messageId, to: from, subject: `Re: ${subject || ''}`.trim(), htmlBody: replyHtml });
       }

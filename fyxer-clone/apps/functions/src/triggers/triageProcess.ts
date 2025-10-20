@@ -10,7 +10,7 @@ import { outlookBusy } from '../connectors/outlookCal';
 import { detectAvailabilityIntent, extractProposedSlots } from '../util/availabilityParse';
 import { suggestAvailability, Slot } from '../util/availability';
 import { renderAvailabilityHtml, renderAcceptanceHtml } from '../util/availabilityReply';
-import { createGmailDraftSimpleReply } from '../util/gmailDraft';
+import { createGmailDraftSimpleReply, buildGmailReplyHeaders } from '../util/gmailDraft';
 import { createOutlookDraftReply } from '../util/outlookDraft';
 import { makeDefaultReplyHTML } from '../util/defaultReply';
 
@@ -24,6 +24,8 @@ function isInsufficientScopeError(e: any): boolean {
   const msg = (e?.message || e?.response?.data?.error?.message || '').toString().toLowerCase();
   return msg.includes('insufficient') && msg.includes('scope');
 }
+
+// Headers are now built from the last message in the thread for reliability.
 
 export const triageProcess = onMessagePublished('triage.process', async (event) => {
   const payload = event.data?.message?.data ? JSON.parse(Buffer.from(event.data.message.data, 'base64').toString()) : {};
@@ -108,7 +110,8 @@ export const triageProcess = onMessagePublished('triage.process', async (event) 
       }
 
       if (provider === 'gmail') {
-        await createGmailDraftSimpleReply({ accessToken: token, threadId, to: from, subject: `Re: ${subject || 'Availability'}`, htmlBody });
+        const replyHeaders = await buildGmailReplyHeaders({ accessToken: token, threadId });
+        await createGmailDraftSimpleReply({ accessToken: token, threadId, to: from, subject: `Re: ${subject || 'Availability'}`, htmlBody, extraHeaders: replyHeaders });
       } else {
         await createOutlookDraftReply({ accessToken: token, replyToMessageId: messageId, to: from, subject: `Re: ${subject || 'Availability'}`, htmlBody });
       }
@@ -129,7 +132,8 @@ export const triageProcess = onMessagePublished('triage.process', async (event) 
       const customerName = titleCaseEmailLocal(from);
       const replyHtml = await makeDefaultReplyHTML({ customerName, subject, plainText: text });
       if (provider === 'gmail') {
-        await createGmailDraftSimpleReply({ accessToken: token, threadId, to: from, subject: `Re: ${subject || ''}`.trim(), htmlBody: replyHtml, extraHeaders: { 'X-Fyxer-Default-Reply': '1' } });
+        const replyHeaders = await buildGmailReplyHeaders({ accessToken: token, threadId });
+        await createGmailDraftSimpleReply({ accessToken: token, threadId, to: from, subject: `Re: ${subject || ''}`.trim(), htmlBody: replyHtml, extraHeaders: { 'X-Fyxer-Default-Reply': '1', ...replyHeaders } });
       } else {
         await createOutlookDraftReply({ accessToken: token, replyToMessageId: messageId, to: from, subject: `Re: ${subject || ''}`.trim(), htmlBody: replyHtml });
       }

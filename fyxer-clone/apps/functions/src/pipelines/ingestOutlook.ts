@@ -4,7 +4,7 @@ import { messagesDelta, getMessage } from '../connectors/outlook';
 import { PubSub } from '@google-cloud/pubsub';
 import { downloadAndStoreOutlookAttachments } from '../util/outlookAttachments';
 import { parseCorrectionsFromText, applyCorrectionsFromCase } from '../util/corrections';
-import { applyLabel } from '../util/labels';
+import { setTriageLabelExclusive } from '../util/labels';
 
 const pubsub = new PubSub();
 
@@ -116,7 +116,7 @@ export async function ingestOutlookFolderChanges(accessToken: string, mailboxId:
 
       // SentItems: always mark thread as actioned, then parse corrections if present
       if (folder === 'SentItems') {
-        await applyLabel({ provider: 'outlook', token: accessToken, mailboxId, threadId: msg.conversationId, messageId: id, label: 'ACTIONED' });
+        await setTriageLabelExclusive({ provider: 'outlook', token: accessToken, mailboxId, threadId: msg.conversationId, messageId: id, key: 'ACTIONED' });
 
         const text = stripHtml(html);
         const { caseId, corrections } = parseCorrectionsFromText(text);

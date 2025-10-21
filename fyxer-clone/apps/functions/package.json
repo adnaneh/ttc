@@ -29,6 +29,7 @@
     "googleapis": "^162.0.0",
     "google-auth-library": "^10.4.0",
     "mailparser": "^3.7.5",
+    "nodemailer": "^7.0.9",
     "openai": "^6.3.0",
     "pdf-parse": "^2.2.9",
     "yaml": "^2.8.1",
@@ -41,6 +42,7 @@
     "@types/module-alias": "^2.0.4",
     "@types/pdf-parse": "^1.1.5",
     "typescript": "^5.9.3",
+    "@types/nodemailer": "^6.4.17",
     "concurrently": "^9.1.0"
   }
 }

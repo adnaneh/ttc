@@ -135,9 +135,11 @@ export const triageProcess = onMessagePublished('triage.process', async (event) 
       const replyHtml = await makeDefaultReplyHTML({ customerName, subject, plainText: text });
       if (provider === 'gmail') {
         const { messageId: rfcId, references, replyTo: rfcReplyTo, from: rfcFrom } = await getMessageRfcHeaders({ accessToken: token, messageId });
-        const replyHeaders = rfcId ? { 'In-Reply-To': rfcId, 'References': (references ? `${references} ` : '') + rfcId } : {};
         const targetTo = (rfcReplyTo || rfcFrom || from);
-        await createGmailDraftSimpleReply({ accessToken: token, threadId, to: targetTo, subject: subject || '', htmlBody: replyHtml, extraHeaders: { ...replyHeaders, 'X-Fyxer-Default-Reply': '1' } });
+        const extraHeaders: Record<string, string> = rfcId
+          ? { 'In-Reply-To': rfcId, 'References': (references ? `${references} ` : '') + rfcId, 'X-Fyxer-Default-Reply': '1' }
+          : { 'X-Fyxer-Default-Reply': '1' };
+        await createGmailDraftSimpleReply({ accessToken: token, threadId, to: targetTo, subject: subject || '', htmlBody: replyHtml, extraHeaders });
       } else {
         await createOutlookDraftReply({ accessToken: token, replyToMessageId: messageId, to: from, subject: `Re: ${subject || ''}`.trim(), htmlBody: replyHtml });
       }

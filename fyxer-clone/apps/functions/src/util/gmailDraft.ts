@@ -1,18 +1,20 @@
 import { gmailClientFromAccessToken } from '../connectors/gmail';
+import MailComposer from 'nodemailer/lib/mail-composer';
+import type Mail from 'nodemailer/lib/mailer';
+import type { Attachment } from 'nodemailer/lib/mailer';
 
-function b64url(b: Buffer | string) {
-  const buf = Buffer.isBuffer(b) ? b : Buffer.from(b, 'utf8');
-  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+function encodeMessage(message: Buffer) {
+  return Buffer.from(message)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
 }
 
-export function composeAltMime(headers: Record<string, string>, text: string, html: string) {
-  const boundary = '====fyxer_alt_' + Math.random().toString(36).slice(2);
-  const head = Object.entries(headers).map(([k,v]) => `${k}: ${v}`).join('\r\n') + `\r\nMIME-Version: 1.0\r\nContent-Type: multipart/alternative; boundary="${boundary}"\r\n\r\n`;
-  const body =
-    `--${boundary}\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${text}\r\n\r\n` +
-    `--${boundary}\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n${html}\r\n\r\n` +
-    `--${boundary}--`;
-  return head + body;
+async function createMail(options: Mail.Options) {
+  const composer = new MailComposer(options);
+  const compiled = await composer.compile().build();
+  return encodeMessage(compiled);
 }
 
 // Helper to fetch RFC822 headers for a specific Gmail message
@@ -48,21 +50,25 @@ export async function createGmailDraftReply(params: {
   caseId: string;
   textBody: string;
   htmlBody: string;
+  attachments?: Attachment[];
 }) {
   const gmail = gmailClientFromAccessToken(params.accessToken);
-  const headers: Record<string, string> = {
-    To: params.to,
-    Subject: params.subject,
-    'X-Fyxer-Case-Id': params.caseId
-  };
-  if (params.inReplyTo) {
-    headers['In-Reply-To'] = params.inReplyTo;
-    headers['References'] = params.references || params.inReplyTo;
-  }
-  const raw = composeAltMime(headers, params.textBody, params.htmlBody);
+  const headers: Record<string, string> = { 'X-Fyxer-Case-Id': params.caseId };
+  const raw = await createMail({
+    to: params.to,
+    subject: params.subject,
+    alternatives: [
+      { contentType: 'text/plain; charset=UTF-8', content: params.textBody },
+      { contentType: 'text/html; charset=UTF-8', content: params.htmlBody },
+    ],
+    attachments: params.attachments,
+    headers,
+    inReplyTo: params.inReplyTo || '',
+    references: (params.references || params.inReplyTo || '')
+  });
   const res = await gmail.users.drafts.create({
     userId: 'me',
-    requestBody: { message: { threadId: params.threadId, raw: b64url(raw) } }
+    requestBody: { message: { threadId: params.threadId, raw } }
   });
   return res.data;
 }
@@ -75,6 +81,7 @@ export async function createGmailDraftSimpleReply(params: {
   htmlBody: string;
   textBody?: string;
   extraHeaders?: Record<string, string>;
+  attachments?: Attachment[];
 }) {
   const gmail = gmailClientFromAccessToken(params.accessToken);
   const plain = (params.textBody ?? params.htmlBody)
@@ -82,14 +89,22 @@ export async function createGmailDraftSimpleReply(params: {
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/<[^>]+>/g, ' ')
     .replace(/\s+/g, ' ')
-    .trim();
+    .trim() || 'See HTML version.';
 
-  const headers: Record<string, string> = { To: params.to, Subject: params.subject, ...(params.extraHeaders || {}) };
-  const raw = composeAltMime(headers, plain || 'See HTML version.', params.htmlBody);
+  const raw = await createMail({
+    to: params.to,
+    subject: params.subject,
+    alternatives: [
+      { contentType: 'text/plain; charset=UTF-8', content: plain },
+      { contentType: 'text/html; charset=UTF-8', content: params.htmlBody },
+    ],
+    attachments: params.attachments,
+    headers: { ...(params.extraHeaders || {}) }
+  });
 
   const res = await gmail.users.drafts.create({
     userId: 'me',
-    requestBody: { message: { threadId: params.threadId, raw: b64url(raw) } }
+    requestBody: { message: { threadId: params.threadId, raw } }
   });
   return res.data;
 }

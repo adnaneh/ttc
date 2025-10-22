@@ -2,7 +2,6 @@
 import { setGlobalOptions } from 'firebase-functions/v2/options';
 import { defineSecret } from 'firebase-functions/params';
 
-// Define shared secrets once and mount them on all functions
 const OPENAI_API_KEY = defineSecret('OPENAI_API_KEY');
 const PINECONE_API_KEY = defineSecret('PINECONE_API_KEY');
 const GMAIL_CLIENT_SECRET = defineSecret('GMAIL_CLIENT_SECRET');

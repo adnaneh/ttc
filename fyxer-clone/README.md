@@ -76,6 +76,22 @@
   - Drafts by day, Applied by day, Correction rate by vendor, Top incoherent fields, Avg correction lag.
 - Assemble into a dashboard; add time/vendor filters.
 
+### Process Mining (BigQuery event log)
+- Code emits process events and case bindings to BigQuery using `@google-cloud/bigquery` (see `apps/functions/src/util/procEvent.ts`).
+- Configure env in `apps/functions/.env.local` or Cloud Run/Functions:
+  - `BQ_DATASET=fyxer_dw`, `BQ_PROC_EVENTS_TABLE=proc_events`, `BQ_CASE_XREF_TABLE=case_xref`.
+- One-time setup options:
+  - CLI: `npm -w apps/functions run bq:ddl` (uses `apps/functions/scripts/bq_proc_events.ddl.sql` and your current `gcloud` project).
+ - API: `npm -w apps/functions run bq:setup` (creates dataset/tables via BigQuery API; idempotent).
+- Local auth: `gcloud auth application-default login` or set `GOOGLE_APPLICATION_CREDENTIALS` to a service account JSON with BigQuery permissions.
+- Local dev quick switches to reduce noise:
+  - Set `LOG_LEVEL=warn` to suppress info-level logs from functions.
+  - Set `GMAIL_DISABLE=1` to skip Gmail token refresh and API calls when emulating (avoids repeated "Google API requested!" warnings).
+- Required IAM for the Functions service account (prod):
+  - `roles/bigquery.dataEditor` on the dataset
+  - `roles/bigquery.jobUser` on the project
+- Sample queries: `apps/functions/scripts/bq_queries.sql` (cases with quote+invoice, traces, DFG, cycle-times).
+
 ### Switching DB backends
 - `DB_BACKEND=mock` → invoice lookups/updates hit Firestore collection `mock_hana_invoices`.
 - `DB_BACKEND=hana` → hits real SAP HANA via `@sap/hana-client`.

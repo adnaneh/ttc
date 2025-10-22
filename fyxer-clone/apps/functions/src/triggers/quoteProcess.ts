@@ -10,6 +10,8 @@ import { createOutlookDraftReply } from '../util/outlookDraft';
 import { createGmailDraftSimpleReply, getMessageRfcHeaders } from '../util/gmailDraft';
 import { orgFeature } from '../util/orgFeatures';
 import { addPersistentLabel, setTriageLabelExclusive } from '../util/labels';
+import { logProcEvent } from '../util/procEvent';
+import { ensureCaseFromQuote, caseIdFromQuote } from '../util/caseBinder';
 
 function strip(html: string) {
   return html
@@ -71,6 +73,27 @@ export const quoteProcess = onMessagePublished(
       const quoteRef = db.collection('quotes').doc();
       const quoteId = quoteRef.id;
 
+      // Ensure process case and emit quote.request
+      const case_id = await ensureCaseFromQuote(quoteId, threadId, orgId, {
+        customerEmail: from,
+        pol: spec.pol,
+        pod: spec.pod,
+        equipment: spec.equipment
+      });
+      await logProcEvent({
+        case_id,
+        event_id: `quote.request:${provider}:${messageId}`,
+        activity: 'quote.request',
+        ts: Date.now(),
+        source: 'email',
+        provider,
+        org_id: orgId,
+        actor: from,
+        thread_id: threadId,
+        message_id: messageId,
+        attrs: { subject, spec }
+      });
+
       // 5) Render draft and create provider-specific reply draft
       const html = renderQuoteHtml({ customerName, spec, quotes, validDays: getValidDays() });
       if (provider === 'outlook') {
@@ -97,7 +120,7 @@ export const quoteProcess = onMessagePublished(
           // Keep subject identical to original (can be empty)
           subject: subject || '',
           htmlBody: html,
-          extraHeaders: extra
+          extraHeaders: { ...(extra || {}), 'X-Fyxer-Quote-Id': quoteId }
         });
         await addPersistentLabel({ provider: 'gmail', token, mailboxId, threadId, messageId, key: 'SPOT_RATE' });
         await setTriageLabelExclusive({ provider: 'gmail', token, mailboxId, threadId, messageId, key: 'TO_RESPOND' });
@@ -109,6 +132,20 @@ export const quoteProcess = onMessagePublished(
         provider, mailboxId, threadId, messageId,
         customer: { name: customerName, email: from },
         spec, options: quotes, createdAt: Date.now()
+      });
+
+      // Emit quote.drafted after draft creation
+      await logProcEvent({
+        case_id,
+        event_id: `quote.drafted:${provider}:${messageId}`,
+        activity: 'quote.drafted',
+        ts: Date.now(),
+        source: 'system',
+        provider,
+        org_id: orgId,
+        thread_id: threadId,
+        message_id: messageId,
+        attrs: { options: quotes }
       });
 
       logger.info('quote: draft created', { provider, mailboxId, messageId, quoteId });

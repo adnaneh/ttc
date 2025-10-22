@@ -9,6 +9,10 @@ export const gmailPush = onMessagePublished({ topic: 'gmail-watch', memory: '512
   const historyId: string | undefined = raw.historyId ? String(raw.historyId) : undefined;
 
   logger.info('Gmail push', { emailAddress, historyId });
+  // Allow disabling external Gmail calls in local/dev to reduce log noise.
+  const gmailDisabled = String(process.env.GMAIL_DISABLE || '').toLowerCase();
+  const skipGmail = gmailDisabled === '1' || gmailDisabled === 'true' || gmailDisabled === 'yes';
+  if (skipGmail) return;
   if (!emailAddress || !historyId) return;
 
   const mailbox = await getMailboxByEmail(emailAddress);

@@ -12,10 +12,15 @@
     "expose:ngrok": "npx -y ngrok http 5001",
     "setup:push": "node tools/setup-push.js",
     "watch:shared": "node tools/watch-shared.js",
+    "bq:setup": "node tools/setup-bq.js",
+    "bq:ddl": "node tools/bq-ddl.js",
+    "bq:seed:trace": "node tools/seed-proc-events.js",
+    "bq:grant:writer": "node tools/grant-bq-writer.js",
     "predev:bridge": "../../scripts/kill_firebase_emulators.sh && ../../scripts/wait_for_emulators_down.sh",
     "dev:bridge": "concurrently --kill-others-on-fail -n TSC_FUN,TSC_SHARED,SYNC_SHARED,EMU,NGROK,PUSH,SEED \"npm run dev\" \"npm -w @fyxer/shared run dev\" \"npm run watch:shared\" \"firebase emulators:start --config ../../firebase.json\" \"npx -y ngrok http 5001\" \"node tools/setup-push.js --watch\" \"node tools/seed-on-start.js\""
   },
   "dependencies": {
+    "@google-cloud/bigquery": "^7.6.0",
     "xlsx": "^0.18.5",
     "module-alias": "^2.2.3",
     "@google-cloud/kms": "^5.2.1",

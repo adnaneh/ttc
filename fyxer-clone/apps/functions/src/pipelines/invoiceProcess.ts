@@ -8,6 +8,7 @@ import { readByPtr } from '../util/storage';
 import { getFreshAccessTokenForMailbox, getFreshGraphAccessTokenForMailbox } from '../util/tokenStore';
 // import { google } from 'googleapis';
 import { addPersistentLabel, setTriageLabelExclusive } from '../util/labels';
+import { logProcEvent, tempCaseIdForThread } from '../util/procEvent';
 
 function escapeHtml(s: string) { return String(s).replace(/[&<>\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]!)); }
 
@@ -52,7 +53,33 @@ export async function processInvoiceAttachment(args: {
   if (!sap) return { matched: false };
 
   const incoherences = findIncoherences(fields, sap);
+  // Log invoice.parsed
+  await logProcEvent({
+    case_id: tempCaseIdForThread(args.threadId),
+    event_id: `invoice.parsed:${args.provider}:${args.messageId}`,
+    activity: 'invoice.parsed',
+    ts: Date.now(),
+    source: 'system',
+    provider: args.provider,
+    thread_id: args.threadId,
+    message_id: args.messageId,
+    attrs: { fields, sapMatch: { ok: true } }
+  });
+
   if (incoherences.length === 0) return { matched: true, coherent: true };
+
+  // Log incoherence detected
+  await logProcEvent({
+    case_id: tempCaseIdForThread(args.threadId),
+    event_id: `invoice.incoherence.detected:${args.provider}:${args.messageId}`,
+    activity: 'invoice.incoherence.detected',
+    ts: Date.now(),
+    source: 'system',
+    provider: args.provider,
+    thread_id: args.threadId,
+    message_id: args.messageId,
+    attrs: { diffs: incoherences }
+  });
 
   // Build case and draft
   const caseRef = db.collection('cases').doc();

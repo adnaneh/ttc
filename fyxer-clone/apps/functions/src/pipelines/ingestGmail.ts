@@ -8,6 +8,7 @@ import { logger } from '../util/logger';
 import { parseCorrectionsFromText, applyCorrectionsFromCase } from '../util/corrections';
 import { applyLabel } from '../util/labels';
 import { getFreshAccessTokenForMailbox } from '../util/tokenStore';
+import { logProcEvent, tempCaseIdForThread } from '../util/procEvent';
 
 function stripHtml(s: string) {
   return s
@@ -86,6 +87,18 @@ export async function ingestFromGmail(accessToken: string, startHistoryId: strin
       const isPdf = mime.includes('pdf') || name.endsWith('.pdf');
       const isImage = mime.startsWith('image/') || name.endsWith('.png') || name.endsWith('.jpg') || name.endsWith('.jpeg');
       if ((isPdf || isImage) && msg.threadId) {
+        // Log invoice.received.vendor when an invoice-like attachment arrives
+        await logProcEvent({
+          case_id: tempCaseIdForThread(msg.threadId),
+          event_id: `invoice.received.vendor:gmail:${msg.id}`,
+          activity: 'invoice.received.vendor',
+          ts: Date.now(),
+          source: 'email',
+          provider: 'gmail',
+          thread_id: msg.threadId,
+          message_id: msg.id!,
+          attrs: { filename: a.filename, mimeType: a.mimeType }
+        });
         await pubsub.topic('invoice.process').publishMessage({
           json: { provider: 'gmail', mailboxId, threadId: msg.threadId, messageId: msg.id, attachment: a }
         });
@@ -160,6 +173,26 @@ export async function ingestFromGmail(accessToken: string, startHistoryId: strin
       // Already labeled as actioned above for all sent messages
     
       // Quote selection via email is disabled.
+
+      // Emit quote.sent if there is a known quote for this thread
+      if (msg.threadId) {
+        const qSnap = await db.collection('quotes').where('threadId', '==', msg.threadId).limit(1).get();
+        if (!qSnap.empty) {
+          const q = qSnap.docs[0];
+          const case_id = `Q:${q.id}`;
+          await logProcEvent({
+            case_id,
+            event_id: `quote.sent:gmail:${msg.id}`,
+            activity: 'quote.sent',
+            ts: Date.now(),
+            source: 'email',
+            provider: 'gmail',
+            actor: hget('From'),
+            thread_id: msg.threadId,
+            message_id: msg.id!
+          });
+        }
+      }
     }
   }
 

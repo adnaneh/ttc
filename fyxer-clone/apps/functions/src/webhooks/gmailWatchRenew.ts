@@ -5,6 +5,10 @@ import { getFreshAccessTokenForMailbox } from '../util/tokenStore';
 import { startWatch } from '../connectors/gmail';
 
 export const gmailWatchRenew = onSchedule('every 60 minutes', async () => {
+  const gmailDisabled = String(process.env.GMAIL_DISABLE || '').toLowerCase();
+  const skipGmail = gmailDisabled === '1' || gmailDisabled === 'true' || gmailDisabled === 'yes';
+  if (skipGmail) return;
+
   const soon = Date.now() + 60 * 60 * 1000; // 1h lookahead
   const q = await db.collection('mailboxes')
     .where('type', '==', 'gmail')

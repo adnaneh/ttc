@@ -13,6 +13,7 @@ import { renderAvailabilityHtml, renderAcceptanceHtml } from '../util/availabili
 import { createGmailDraftSimpleReply, getMessageRfcHeaders } from '../util/gmailDraft';
 import { createOutlookDraftReply } from '../util/outlookDraft';
 import { makeDefaultReplyHTML } from '../util/defaultReply';
+import { aiGetCalendarAvailability } from '../agents/calendarAvailability';
 
 function strip(html: string) { return html.replace(/<style[\s\S]*?<\/style>/gi,'').replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<[^>]+>/g,' '); }
 function titleCaseEmailLocal(email: string) {
@@ -87,11 +88,15 @@ export const triageProcess = onMessagePublished('triage.process', async (event) 
 
       // If the sender proposed explicit slots, prefer those that fit our calendar
       const proposals = extractProposedSlots(text, cfg.timezone);
-
+      const nowMs = Date.now();
+      const minNoticeMs = cfg.minNoticeMin * 60 * 1000;
+      const withinNotice = (s: Slot) => s.startMs >= (nowMs + minNoticeMs);
       const overlap = (a: Slot, b: Slot) => !(a.endMs <= b.startMs || a.startMs >= b.endMs);
+
       let slots: Slot[] = proposals.slots.length
         ? proposals.slots
             .slice()
+            .filter(withinNotice)
             .sort((a, b) => a.startMs - b.startMs)
             .filter(s => busy.every(b => !overlap(s, b)))
         : [];
@@ -102,8 +107,43 @@ export const triageProcess = onMessagePublished('triage.process', async (event) 
         // Accept the first conflict-free proposed time
         htmlBody = renderAcceptanceHtml({ customerName, tz: proposals.displayTz || cfg.timezone, slot: slots[0] });
       } else {
-        // Fall back to our own suggestions if no proposal or all conflict
-        const sugg = suggestAvailability(busy, cfg, avail.constraints);
+        // If no valid proposal, compute suggestions; try agent first, then fall back
+        let sugg: Slot[] = [];
+        try {
+          const suggested = await aiGetCalendarAvailability({
+            text,
+            timezone: cfg.timezone,
+            lookaheadDays: cfg.lookaheadDays,
+            cfg: {
+              minNoticeMin: cfg.minNoticeMin,
+              workDays: cfg.workDays,
+              workStartMin: cfg.workStartMin,
+              workEndMin: cfg.workEndMin,
+              durationMin: cfg.durationMin,
+              slotIncrementMin: cfg.slotIncrementMin,
+              suggestCount: cfg.suggestCount,
+              timezone: cfg.timezone,
+            },
+            gcalBusy: provider === 'gmail' ? async ({ startMs, endMs }) => {
+              const intervals = await gcalBusyPrimary(token, new Date(startMs).toISOString(), new Date(endMs).toISOString());
+              return intervals.map(([s, e]) => ({ startMs: s, endMs: e }));
+            } : null,
+            outlookBusy: provider !== 'gmail' ? async ({ startMs, endMs, timezone }) => {
+              const intervals = await outlookBusy(token, new Date(startMs).toISOString(), new Date(endMs).toISOString(), timezone || cfg.timezone);
+              return intervals.map(([s, e]) => ({ startMs: s, endMs: e }));
+            } : null,
+          });
+          sugg = (suggested?.suggestedTimes || []) as Slot[];
+        } catch (e) {
+          // degrade to local suggestion below
+          logger.warn('availability.agent_failed', { err: String((e as any)?.message || e) });
+        }
+
+        if (!sugg.length) {
+          // Fall back to our own suggestions if agent yields nothing
+          sugg = suggestAvailability(busy, cfg, avail.constraints);
+        }
+
         htmlBody = renderAvailabilityHtml({ customerName, tz: proposals.displayTz || cfg.timezone, slots: sugg });
       }
 

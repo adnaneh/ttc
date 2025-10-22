@@ -1,0 +1,8 @@
+google-cloud-bigquery
+google-cloud-storage
+pm4py
+pandas
+pyarrow
+db-dtypes
+graphviz
+google-cloud-bigquery-storage

@@ -14,6 +14,7 @@
     "watch:shared": "node tools/watch-shared.js",
     "bq:setup": "node tools/setup-bq.js",
     "bq:ddl": "node tools/bq-ddl.js",
+    "bq:views": "node tools/bq-views.js",
     "bq:seed:trace": "node tools/seed-proc-events.js",
     "bq:grant:writer": "node tools/grant-bq-writer.js",
     "predev:bridge": "../../scripts/kill_firebase_emulators.sh && ../../scripts/wait_for_emulators_down.sh",

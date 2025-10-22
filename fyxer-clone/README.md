@@ -92,6 +92,26 @@
   - `roles/bigquery.jobUser` on the project
 - Sample queries: `apps/functions/scripts/bq_queries.sql` (cases with quote+invoice, traces, DFG, cycle-times).
 
+#### Canonical views + analytics
+- Create canonical views and task map:
+  - `npm -w apps/functions run bq:views` (applies `apps/functions/scripts/bq_proc_views.sql` to your active `gcloud` project)
+- Extra analytics queries (variants, spans, DFG, cycle-times):
+  - See `apps/functions/scripts/bq_proc_analytics.sql`
+
+#### BPMN discovery (PM4Py)
+- A small Cloud Run Job is provided in `jobs/pm4py_discovery` to discover BPMN from `v_proc_events_canon` and upload SVG to GCS.
+- See `jobs/pm4py_discovery/README.md` for build/deploy steps and required env vars (`GCP_PROJECT`, `BQ_DATASET`, `OUTPUT_BUCKET`).
+
+#### HTTP endpoint (DFG edges)
+- New Cloud Function: `procDfg` (GET)
+  - Path: `https://REGION-PROJECT.cloudfunctions.net/procDfg`
+  - Query params:
+    - `sinceDays` (int, default 180)
+    - `minFreq` (int, default 1)
+    - `limit` (int, default 200)
+    - `requireQuoteAndInvoice=1` to restrict to cases with both `quote.request` and `invoice.received.vendor`.
+  - Returns: `{ meta, edges: [{ from, to, freq, p50_min }] }`
+
 ### Switching DB backends
 - `DB_BACKEND=mock` → invoice lookups/updates hit Firestore collection `mock_hana_invoices`.
 - `DB_BACKEND=hana` → hits real SAP HANA via `@sap/hana-client`.

@@ -38,6 +38,7 @@ export { gmailPushBridge } from './https/gmailPushBridge';
 export { rewatchGmail } from './https/rewatchGmail';
 export { seedMockFromGcs } from './https/seedMockFromGcs';
 export { adminMockInvoicesList, adminMockInvoicesGet, adminMockInvoicesUpdate } from './https/mockInvoices';
+export { procDfg } from './https/procDfg';
 
 // Webhooks / cron
 export { graphWebhook } from './webhooks/graphWebhook';
